@@ -75,17 +75,16 @@ See the LICENSE file for more information.
 4. About
 --------
 
-WinDivert was written by basil.
-
-For further information, or bug reports, please contact:
-
-    basil@reqrypt.org
+Original WinDivert was written by basil.
 
 The homepage for WinDivert is:
+https://reqrypt.org/windivert.html
 
-    https://reqrypt.org/windivert.html
+This is a version of WinDivert used for Windows Steadybit extensions.
 
-The source code for WinDivert is hosted by GitHub at:
+4. Requirements 
+--------
 
-    https://github.com/basil00/Divert
-
+- [Visual Studio 2022](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-visual-studio-step-1-install-visual-studio-2022)
+- [Windows Driver Kit](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-sdk-step-2-install-sdk)
+- [Windows SDK](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-wdk-step-3-install-wdk)

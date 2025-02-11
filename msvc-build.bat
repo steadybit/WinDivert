@@ -34,23 +34,10 @@
 
 msbuild sys\windivert.vcxproj ^
     /p:Configuration=Release ^
-    /p:platform=Win32 ^
-    /p:SignMode=Off ^
-    /p:OutDir=..\install\MSVC\i386\ ^
-    /p:AssemblyName=WinDivert32
-
-msbuild sys\windivert.vcxproj ^
-    /p:Configuration=Release ^
     /p:platform=x64 ^
     /p:SignMode=Off ^
     /p:OutDir=..\install\MSVC\amd64\ ^
     /p:AssemblyName=WinDivert64
-
-msbuild dll\windivert.vcxproj ^
-    /p:Configuration=Release ^
-    /p:platform=Win32 ^
-    /p:OutDir=..\install\MSVC\i386\
-move dll\WinDivert.lib install\MSVC\i386\.
 
 msbuild dll\windivert.vcxproj ^
     /p:Configuration=Release ^
@@ -60,18 +47,8 @@ move dll\WinDivert.lib install\MSVC\amd64\.
 
 msbuild examples\flowtrack\flowtrack.vcxproj ^
     /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
-
-msbuild examples\flowtrack\flowtrack.vcxproj ^
-    /p:Configuration=Release ^
     /p:Platform=x64 ^
     /p:OutDir=..\..\install\MSVC\amd64\
-
-msbuild examples\netdump\netdump.vcxproj ^
-    /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
 
 msbuild examples\netdump\netdump.vcxproj ^
     /p:Configuration=Release ^
@@ -80,18 +57,8 @@ msbuild examples\netdump\netdump.vcxproj ^
 
 msbuild examples\netfilter\netfilter.vcxproj ^
     /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
-
-msbuild examples\netfilter\netfilter.vcxproj ^
-    /p:Configuration=Release ^
     /p:Platform=x64 ^
     /p:OutDir=..\..\install\MSVC\amd64\
-
-msbuild examples\passthru\passthru.vcxproj ^
-    /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
 
 msbuild examples\passthru\passthru.vcxproj ^
     /p:Configuration=Release ^
@@ -100,18 +67,8 @@ msbuild examples\passthru\passthru.vcxproj ^
 
 msbuild examples\socketdump\socketdump.vcxproj ^
     /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
-
-msbuild examples\socketdump\socketdump.vcxproj ^
-    /p:Configuration=Release ^
     /p:Platform=x64 ^
     /p:OutDir=..\..\install\MSVC\amd64\
-
-msbuild examples\streamdump\streamdump.vcxproj ^
-    /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
 
 msbuild examples\streamdump\streamdump.vcxproj ^
     /p:Configuration=Release ^
@@ -120,28 +77,13 @@ msbuild examples\streamdump\streamdump.vcxproj ^
 
 msbuild examples\webfilter\webfilter.vcxproj ^
     /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
-
-msbuild examples\webfilter\webfilter.vcxproj ^
-    /p:Configuration=Release ^
     /p:Platform=x64 ^
     /p:OutDir=..\..\install\MSVC\amd64\
 
 msbuild examples\windivertctl\windivertctl.vcxproj ^
     /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\..\install\MSVC\i386\
-
-msbuild examples\windivertctl\windivertctl.vcxproj ^
-    /p:Configuration=Release ^
     /p:Platform=x64 ^
     /p:OutDir=..\..\install\MSVC\amd64\
-
-msbuild test\test.vcxproj ^
-    /p:Configuration=Release ^
-    /p:Platform=Win32 ^
-    /p:OutDir=..\install\MSVC\i386\
 
 msbuild test\test.vcxproj ^
     /p:Configuration=Release ^
