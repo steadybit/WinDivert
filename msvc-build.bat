@@ -36,57 +36,55 @@ msbuild sys\windivertdriver.vcxproj ^
     /p:Configuration=Release ^
     /p:platform=x64 ^
     /p:SignMode=Off ^
-    /p:OutDir=..\install\MSVC\amd64\ ^
-    /p:AssemblyName=WinDivert64
+    /p:OutDir=..\output\x64 ^
 
-msbuild dll\windivertdll.vcxproj ^
+msbuild dll\windivert.vcxproj ^
     /p:Configuration=Release ^
     /p:platform=x64 ^
-    /p:OutDir=..\install\MSVC\amd64\
-move dll\WinDivert.lib install\MSVC\amd64\.
+    /p:OutDir=..\output\x64
 
 msbuild examples\flowtrack\flowtrack.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\netdump\netdump.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\netfilter\netfilter.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\passthru\passthru.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\socketdump\socketdump.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\streamdump\streamdump.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\webfilter\webfilter.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild examples\windivertctl\windivertctl.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\..\install\MSVC\amd64\
+    /p:OutDir=..\..\output\x64
 
 msbuild test\test.vcxproj ^
     /p:Configuration=Release ^
     /p:Platform=x64 ^
-    /p:OutDir=..\install\MSVC\amd64\
+    /p:OutDir=..\output\x64
 

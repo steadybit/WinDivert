@@ -23,7 +23,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "windivertdriver", "sys\windivertdriver.vcxproj", "{8F96020E-79AE-49CF-B796-7DB9F3264854}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "windivertdll", "dll\windivertdll.vcxproj", "{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "windivert", "dll\windivert.vcxproj", "{75507373-A59E-466A-9055-E1078705AC58}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -134,18 +134,18 @@ Global
 		{8F96020E-79AE-49CF-B796-7DB9F3264854}.Release|x86.ActiveCfg = Release|Win32
 		{8F96020E-79AE-49CF-B796-7DB9F3264854}.Release|x86.Build.0 = Release|Win32
 		{8F96020E-79AE-49CF-B796-7DB9F3264854}.Release|x86.Deploy.0 = Release|Win32
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|Any CPU.ActiveCfg = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|Any CPU.Build.0 = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|x64.ActiveCfg = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|x64.Build.0 = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|x86.ActiveCfg = Release|Win32
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Debug|x86.Build.0 = Release|Win32
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|Any CPU.ActiveCfg = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|Any CPU.Build.0 = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|x64.ActiveCfg = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|x64.Build.0 = Release|x64
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|x86.ActiveCfg = Release|Win32
-		{B4AC7AC7-C738-4694-BF45-3CA51405F8EC}.Release|x86.Build.0 = Release|Win32
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|Any CPU.ActiveCfg = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|Any CPU.Build.0 = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|x64.ActiveCfg = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|x64.Build.0 = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|x86.ActiveCfg = Release|Win32
+		{75507373-A59E-466A-9055-E1078705AC58}.Debug|x86.Build.0 = Release|Win32
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|Any CPU.ActiveCfg = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|Any CPU.Build.0 = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|x64.ActiveCfg = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|x64.Build.0 = Release|x64
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|x86.ActiveCfg = Release|Win32
+		{75507373-A59E-466A-9055-E1078705AC58}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
