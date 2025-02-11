@@ -32,14 +32,14 @@
 
 @echo off
 
-msbuild sys\windivert.vcxproj ^
+msbuild sys\windivertdriver.vcxproj ^
     /p:Configuration=Release ^
     /p:platform=x64 ^
     /p:SignMode=Off ^
     /p:OutDir=..\install\MSVC\amd64\ ^
     /p:AssemblyName=WinDivert64
 
-msbuild dll\windivert.vcxproj ^
+msbuild dll\windivertdll.vcxproj ^
     /p:Configuration=Release ^
     /p:platform=x64 ^
     /p:OutDir=..\install\MSVC\amd64\
