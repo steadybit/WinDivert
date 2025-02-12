@@ -88,3 +88,17 @@ This is a version of WinDivert used for Windows Steadybit extensions.
 - [Visual Studio 2022](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-visual-studio-step-1-install-visual-studio-2022)
 - [Windows Driver Kit](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-sdk-step-2-install-sdk)
 - [Windows SDK](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-wdk-step-3-install-wdk)
+
+5. Good to Know 
+--------
+Test driver certificate must be added to "Trusted Root Certification Authorities" using ```certmgr.msc```.
+
+To see if the certificate is well formed use ```certutil -dump [certname].cer```.
+
+To check if the .sys file is properly signed use ```signtool verify /pa /v .\[sysname].sys```.
+
+By default Windows does not load test-signed kernel-mode drivers. To change this several things must be done:
+- Turn off secure boot (if you use bitlocker volume encryption don't forget to retrieve recovery key beforehand).
+- In CLI ```Bcdedit.exe -set TESTSIGNING ON```.
+- Restart the machine.
+- Test-signed driver can be used.
