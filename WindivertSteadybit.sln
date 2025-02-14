@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "windivertdriver", "sys\wind
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "windivert", "dll\windivert.vcxproj", "{75507373-A59E-466A-9055-E1078705AC58}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "passthrough", "examples\passthrough\passthrough.vcxproj", "{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -146,6 +148,18 @@ Global
 		{75507373-A59E-466A-9055-E1078705AC58}.Release|x64.Build.0 = Release|x64
 		{75507373-A59E-466A-9055-E1078705AC58}.Release|x86.ActiveCfg = Release|Win32
 		{75507373-A59E-466A-9055-E1078705AC58}.Release|x86.Build.0 = Release|Win32
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|Any CPU.ActiveCfg = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|Any CPU.Build.0 = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|x64.ActiveCfg = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|x64.Build.0 = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|x86.ActiveCfg = Release|Win32
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Debug|x86.Build.0 = Release|Win32
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|Any CPU.ActiveCfg = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|Any CPU.Build.0 = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|x64.ActiveCfg = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|x64.Build.0 = Release|x64
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|x86.ActiveCfg = Release|Win32
+		{1B84B17C-40D0-42EB-88AB-EF491D37D1C4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
