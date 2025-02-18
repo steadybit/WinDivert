@@ -91,6 +91,8 @@ This is a version of WinDivert used for Windows Steadybit extensions.
 
 5. Good to Know 
 --------
+Run Visual Studio in administrator mode (driver temporarily installs during runtime which requires these privileges).
+
 Test driver certificate must be added to "Trusted Root Certification Authorities" using ```certmgr.msc```.
 
 To see if the certificate is well formed use ```certutil -dump [certname].cer```.

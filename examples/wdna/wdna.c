@@ -52,8 +52,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cargs.h>
+#include <stdbool.h>
 
 #include "windivert.h"
+#include <queue.h>
 
 #define ntohs(x)            WinDivertHelperNtohs(x)
 #define ntohl(x)            WinDivertHelperNtohl(x)
@@ -124,6 +126,10 @@ static struct cag_option options[] = {
     .access_name = "time",
     .value_name = "TIME",
     .description = "[MODE:delay] - how much should traffic be delayed in 'ms'."},
+	 {.identifier = 'h',
+	.access_letters = "h",
+	.access_name = "help",
+	.description = "Shows all options."}
 };
 
 int FIBER_DONE = 0;
@@ -131,10 +137,10 @@ int FIBER_DONE = 0;
 void FiberFunction(void* param) {
     printf("Fiber started.\n");
 
-    DWORD start_time = GetTickCount();
+    DWORD start_time = GetTickCount64();
     DWORD sleep_duration = 500;
 
-    while (GetTickCount() - start_time < sleep_duration) {
+    while (GetTickCount64() - start_time < sleep_duration) {
         SwitchToFiber(param);
     }
 
@@ -143,40 +149,168 @@ void FiberFunction(void* param) {
     SwitchToFiber(param);
 }
 
+typedef struct {
+    bool done;
+    LPVOID address;
+} FIBER_STATE;
+
+typedef struct {
+    LPVOID main;
+};
+
+typedef struct packet_info {
+    unsigned char* packet_data;
+    UINT packet_len;
+} PACKET_INFO;
+
+typedef struct handle_packets_opts {
+    QUEUE* queue;
+    const char* filter;
+} HANDLE_PACKETS_OPTS;
+
+static void HandlePackets(HANDLE_PACKETS_OPTS* opts);
+static void PrintPacketQueue(QUEUE* queue);
 
 /*
  * Entry.
  */
 int __cdecl main(int argc, char **argv)
 {
-    LPVOID mainFiber = ConvertThreadToFiber(NULL); // Thread must be converted into a fiber before we can schedule other fibers.
-
-    if (mainFiber == NULL) {
-        printf("Failed converting thread to a fiber.\n");
-        return -1;
-    }
-
-    LPVOID fiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberFunction, mainFiber);
-
-    if (fiber == NULL) {
-        printf("Failed creating a new fiber.\n");
-        return -1;
-    }
-
-    while (true) {
-        if (FIBER_DONE == 0) {
-			SwitchToFiber(fiber);
-        }
-        else {
+    const char* filter = NULL;
+    cag_option_context context;
+    cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
+    while (cag_option_fetch(&context)) {
+        switch (cag_option_get_identifier(&context)) {
+        case 'f':
+            filter = cag_option_get_value(&context);
             break;
+
+        case 'h':
+            cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+            return 0;
         }
     }
 
-	printf("Escaped While");
-	DeleteFiber(fiber);
-    DeleteFiber(mainFiber);
+    printf("Filter: %s\n", filter);
+    
+    QUEUE packet_queue;
+    HANDLE mtx = CreateMutex(NULL, FALSE, NULL);
 
+    if (mtx == NULL) {
+        printf("error: create mutex failed %d.\n", GetLastError());
+        return 1;
+    }
+
+    initQueue(&packet_queue, &mtx);
+
+    HANDLE_PACKETS_OPTS opts = { &packet_queue, filter };
+    HandlePackets(&opts);
     return 0;
+}
+
+static void HandlePackets(HANDLE_PACKETS_OPTS* opts) {
+    HANDLE handle;
+    int priority = 0;
+    handle = WinDivertOpen(opts->filter, WINDIVERT_LAYER_NETWORK, (INT16)priority,
+        0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_INVALID_PARAMETER)
+        {
+            fprintf(stderr, "error: filter syntax error\n");
+            exit(EXIT_FAILURE);
+        }
+        fprintf(stderr, "error: failed to open the WinDivert device (%d)\n",
+            GetLastError());
+        exit(EXIT_FAILURE);
+    }
+    unsigned char* packet = (unsigned char*)malloc(MAXBUF * sizeof(unsigned char));
+
+    if (packet == NULL) {
+        printf("Packet memory allocation failed!\n");
+        return;
+    }
+
+    UINT packet_len, recv_len, addr_len;
+    WINDIVERT_ADDRESS recv_addr;
+
+    while (TRUE)
+    {
+        if (!WinDivertRecv(handle, packet, MAXBUF, &packet_len,
+                &recv_addr)){
+            fprintf(stderr, "warning: failed to read packet (%d)\n",
+                GetLastError());
+            continue;
+        }
+        
+        unsigned char* packet_copy = (unsigned char*)malloc(packet_len);
+        if (packet_copy == NULL) {
+            printf("error: failed to allocate ememory for packet copy.\n");
+            continue;
+        }
+
+        memcpy(packet_copy, packet, packet_len);
+        PACKET_INFO* packet_info = (PACKET_INFO*)malloc(sizeof(PACKET_INFO));
+
+        if (packet_info == NULL) {
+            printf("error: failed to allocate memory for PACKET_INFO.\n");
+            return;
+        }
+
+        packet_info->packet_data = packet_copy;
+        packet_info->packet_len = packet_len;
+        enqueue(opts->queue, packet_info);
+
+#ifdef _DEBUG
+        PrintPacketQueue(opts->queue);
+#endif
+    }
+}
+
+static void PrintPacketQueue(QUEUE* queue) {
+    if (queue == NULL) {
+        printf("error: queue is not initialized (null).");
+        return;
+    }
+    PWINDIVERT_IPHDR ip_header;
+    PWINDIVERT_IPV6HDR ipv6_header;
+    PWINDIVERT_ICMPHDR icmp_header;
+    PWINDIVERT_ICMPV6HDR icmpv6_header;
+    PWINDIVERT_TCPHDR tcp_header;
+    PWINDIVERT_UDPHDR udp_header;
+    UINT payload_len;
+    UINT32 src_addr[4], dst_addr[4];
+    char src_str[INET6_ADDRSTRLEN+1], dst_str[INET6_ADDRSTRLEN+1];
+
+    printf("printing queue data:\n");
+    NODE* temp = queue->front;
+
+    while (temp != NULL) {
+        PACKET_INFO* data = (PACKET_INFO*)(temp->data);
+		WinDivertHelperParsePacket(data->packet_data, data->packet_len, &ip_header, &ipv6_header,
+			NULL, &icmp_header, &icmpv6_header, &tcp_header, &udp_header, NULL,
+			&payload_len, NULL, NULL);
+
+        if (ip_header != NULL)
+        {
+            WinDivertHelperFormatIPv4Address(ntohl(ip_header->SrcAddr),
+                src_str, sizeof(src_str));
+            WinDivertHelperFormatIPv4Address(ntohl(ip_header->DstAddr),
+                dst_str, sizeof(dst_str));
+        }
+        if (ipv6_header != NULL)
+        {
+            WinDivertHelperNtohIPv6Address(ipv6_header->SrcAddr, src_addr);
+            WinDivertHelperNtohIPv6Address(ipv6_header->DstAddr, dst_addr);
+            WinDivertHelperFormatIPv6Address(src_addr, src_str,
+                sizeof(src_str));
+            WinDivertHelperFormatIPv6Address(dst_addr, dst_str,
+                sizeof(dst_str));
+        }
+
+        printf("ip.SrcAddr=%s ip.DstAddr=%s \n", src_str, dst_str);
+        temp = temp->next;
+    }
 }
 
 /*

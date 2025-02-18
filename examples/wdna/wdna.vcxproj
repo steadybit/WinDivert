@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
 
     netfilter.vcxproj
@@ -36,9 +36,9 @@
 -->
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\cargs\cargs.c" />
+    <ClCompile Include="src\queue.c" />
     <ClCompile Include="wdna.c">
       <TreatWarningAsError>false</TreatWarningAsError>
       <Optimization>MinSpace</Optimization>
@@ -56,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\cargs\cargs.h" />
+    <ClInclude Include="include\queue.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <RootNamespace>netfilter</RootNamespace>
@@ -71,13 +73,25 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\install\MSVC\i386\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\install\MSVC\i386\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateDebugInformation>
     </Link>
+    <ClCompile>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">EnableFastChecks</BasicRuntimeChecks>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

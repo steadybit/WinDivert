@@ -3,8 +3,10 @@
   <ItemGroup>
     <ClCompile Include="wdna.c" />
     <ClCompile Include="external\cargs\cargs.c" />
+    <ClCompile Include="src\queue.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\cargs\cargs.h" />
+    <ClInclude Include="include\queue.h" />
   </ItemGroup>
 </Project>
