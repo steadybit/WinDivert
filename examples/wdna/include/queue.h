@@ -19,3 +19,5 @@ void initQueue(QUEUE* q, HANDLE* mtx);
 void enqueue(QUEUE* q, LPVOID data);
 
 LPVOID dequeue(QUEUE* q);
+
+LPVOID peak(QUEUE* q);

@@ -5,8 +5,7 @@
  * This file is part of WinDivert.
  *
  * WinDivert is free software: you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
+ * the terms of the GNU Lesser General Public License as published by the * Free Software Foundation, either version 3 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
@@ -132,27 +131,6 @@ static struct cag_option options[] = {
 	.description = "Shows all options."}
 };
 
-int FIBER_DONE = 0;
-
-void FiberFunction(void* param) {
-    printf("Fiber started.\n");
-
-    DWORD start_time = GetTickCount64();
-    DWORD sleep_duration = 500;
-
-    while (GetTickCount64() - start_time < sleep_duration) {
-        SwitchToFiber(param);
-    }
-
-    printf("Fiber woke up!\n");
-    FIBER_DONE = 1;
-    SwitchToFiber(param);
-}
-
-typedef struct {
-    bool done;
-    LPVOID address;
-} FIBER_STATE;
 
 typedef struct {
     LPVOID main;
@@ -161,22 +139,25 @@ typedef struct {
 typedef struct packet_info {
     unsigned char* packet_data;
     UINT packet_len;
+    WINDIVERT_ADDRESS* recv_addr;
 } PACKET_INFO;
 
-typedef struct handle_packets_opts {
+typedef struct wdna_opts {
     QUEUE* queue;
-    const char* filter;
-} HANDLE_PACKETS_OPTS;
+    const char* mode;
+    HANDLE* wd_handle;
+} WDNA_OPTS;
 
-static void HandlePackets(HANDLE_PACKETS_OPTS* opts);
+static void ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
-
+static DWORD WINAPI ProcessPackets(LPVOID lpParam);
 /*
  * Entry.
  */
 int __cdecl main(int argc, char **argv)
 {
     const char* filter = NULL;
+    const char* mode = NULL;
     cag_option_context context;
     cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
     while (cag_option_fetch(&context)) {
@@ -185,10 +166,28 @@ int __cdecl main(int argc, char **argv)
             filter = cag_option_get_value(&context);
             break;
 
+        case 'm':
+            mode = cag_option_get_value(&context);
+            if (strcmp("drop", mode) != 0 && strcmp("delay", mode) != 0 && strcmp("corrupt", mode) != 0) {
+                printf("Invalid mode '%s'. Allowed modes are: 'drop', 'delay', 'corrupt'.\n", mode);
+                return 1;
+            }
+            break;
+
         case 'h':
             cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
             return 0;
         }
+    }
+
+    if (filter == NULL) {
+        printf("Filter must not be empty.");
+        return 1;
+    }
+
+    if (mode == NULL) {
+        printf("Mode must not be empty.");
+        return 1;
     }
 
     printf("Filter: %s\n", filter);
@@ -203,16 +202,9 @@ int __cdecl main(int argc, char **argv)
 
     initQueue(&packet_queue, &mtx);
 
-    HANDLE_PACKETS_OPTS opts = { &packet_queue, filter };
-    HandlePackets(&opts);
-    return 0;
-}
-
-static void HandlePackets(HANDLE_PACKETS_OPTS* opts) {
     HANDLE handle;
     int priority = 0;
-    handle = WinDivertOpen(opts->filter, WINDIVERT_LAYER_NETWORK, (INT16)priority,
-        0);
+    handle = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, (INT16)priority, 0);
     if (handle == INVALID_HANDLE_VALUE)
     {
         if (GetLastError() == ERROR_INVALID_PARAMETER)
@@ -224,6 +216,19 @@ static void HandlePackets(HANDLE_PACKETS_OPTS* opts) {
             GetLastError());
         exit(EXIT_FAILURE);
     }
+
+    WDNA_OPTS opts = { &packet_queue, mode, &handle };
+    DWORD processing_thread_id;
+    HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
+
+    ConsumePackets(&opts);
+    WaitForSingleObject(processing_thread, INFINITE);
+    CloseHandle(processing_thread);
+    printf("Stopping the execution.");
+    return 0;
+}
+
+static void ConsumePackets(WDNA_OPTS* opts) {
     unsigned char* packet = (unsigned char*)malloc(MAXBUF * sizeof(unsigned char));
 
     if (packet == NULL) {
@@ -236,33 +241,45 @@ static void HandlePackets(HANDLE_PACKETS_OPTS* opts) {
 
     while (TRUE)
     {
-        if (!WinDivertRecv(handle, packet, MAXBUF, &packet_len,
-                &recv_addr)){
+        if (!WinDivertRecv(*opts->wd_handle, packet, MAXBUF, &packet_len,
+            &recv_addr)) {
             fprintf(stderr, "warning: failed to read packet (%d)\n",
                 GetLastError());
-            continue;
+            return 1;
         }
-        
+
         unsigned char* packet_copy = (unsigned char*)malloc(packet_len);
         if (packet_copy == NULL) {
             printf("error: failed to allocate ememory for packet copy.\n");
-            continue;
+            return 1;
         }
 
         memcpy(packet_copy, packet, packet_len);
+
+        WINDIVERT_ADDRESS* recv_addr_copy = (WINDIVERT_ADDRESS*)malloc(sizeof(WINDIVERT_ADDRESS));
+
+        if (recv_addr_copy == NULL) {
+            printf("error: failed to allocate ememory for packet copy.\n");
+            return 1;
+        }
+
+        memcpy(recv_addr_copy, &recv_addr, sizeof(WINDIVERT_ADDRESS));
+
         PACKET_INFO* packet_info = (PACKET_INFO*)malloc(sizeof(PACKET_INFO));
 
         if (packet_info == NULL) {
             printf("error: failed to allocate memory for PACKET_INFO.\n");
-            return;
+            return 1;
         }
+
 
         packet_info->packet_data = packet_copy;
         packet_info->packet_len = packet_len;
+        packet_info->recv_addr = recv_addr_copy;
         enqueue(opts->queue, packet_info);
 
 #ifdef _DEBUG
-        PrintPacketQueue(opts->queue);
+        //PrintPacketQueue(opts->queue);
 #endif
     }
 }
@@ -379,3 +396,97 @@ static void PacketIpv6Icmpv6Init(PICMPV6PACKET packet)
     packet->ipv6.NextHdr = IPPROTO_ICMPV6;
 }
 
+typedef struct fiber_info {
+    bool done;
+    LPVOID fiber_address;
+    LPVOID main_fiber_address;
+    PACKET_INFO* packet_info;
+    HANDLE* wd_handle;
+    LARGE_INTEGER* start_time;
+} FIBER_INFO;
+
+void FiberDelay(LPVOID lpParam) {
+    FIBER_INFO* fiber_info = (FIBER_INFO*)lpParam;
+    WINDIVERT_ADDRESS recv_addr;
+    UINT packet_len;
+    LARGE_INTEGER end_time, frequency, target_ticks;
+    QueryPerformanceFrequency(&frequency);
+    DWORD sleep_duration = 500;
+    target_ticks.QuadPart = fiber_info->start_time->QuadPart + (sleep_duration * frequency.QuadPart) / 1000;
+
+    do {
+        QueryPerformanceCounter(&end_time);
+        SwitchToFiber(fiber_info->main_fiber_address);
+    } while (end_time.QuadPart < target_ticks.QuadPart);
+
+    PACKET_INFO* packet_info = fiber_info->packet_info;
+    WinDivertSend(*fiber_info->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+    fiber_info->done = true;
+    SwitchToFiber(fiber_info->main_fiber_address);
+}
+
+static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
+    typedef struct delay_fiber_opts {
+        LPVOID main_fiber;
+        PACKET_INFO* packet_info;
+        WDNA_OPTS* wdna_opts;
+    } DELAY_FIBER_OPTS;
+
+
+    WDNA_OPTS* opts = (WDNA_OPTS*)lpParam;
+    QUEUE* packet_queue = opts->queue;
+    QUEUE fiber_queue;
+    HANDLE mtx = CreateMutex(NULL, FALSE, NULL);
+
+    if (mtx == NULL) {
+        printf("error: create mutex failed %d.\n", GetLastError());
+        return 1;
+    }
+
+    initQueue(&fiber_queue, &mtx);
+    printf("Process mode: '%s'", opts->mode);
+
+    if (strcmp(opts->mode, "delay") == 0) {
+        LPVOID main_fiber = ConvertThreadToFiber(NULL);
+        PACKET_INFO* packet;
+        LARGE_INTEGER frequency;
+        QueryPerformanceFrequency(&frequency);
+        while (true) {
+            if (packet = (PACKET_INFO*)dequeue(packet_queue)) {
+                FIBER_INFO* fiber_info = (FIBER_INFO*)malloc(sizeof(FIBER_INFO));
+
+                if (fiber_info == NULL) {
+                    printf("error: failed allocating memory for 'FIBER_INFO'.");
+                    return 1;
+				}
+
+                fiber_info->wd_handle = opts->wd_handle;
+                fiber_info->packet_info = packet;
+                fiber_info->main_fiber_address = main_fiber;
+                fiber_info->done = false;
+                LARGE_INTEGER* start_time = (LARGE_INTEGER*)malloc(sizeof(LARGE_INTEGER));
+                QueryPerformanceCounter(start_time);
+                fiber_info->start_time = start_time;
+                LPVOID delayFiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberDelay, fiber_info);
+                fiber_info->fiber_address = delayFiber;
+                enqueue(&fiber_queue, fiber_info);
+            }
+
+            FIBER_INFO* fiber_info = (FIBER_INFO*)peak(&fiber_queue);
+            if (fiber_info == NULL) {
+                Sleep(1);
+                continue;
+            }
+            SwitchToFiber(fiber_info->fiber_address);
+            if (fiber_info->done) {
+                dequeue(&fiber_queue);
+                DeleteFiber(fiber_info->fiber_address);
+                free(fiber_info->packet_info->packet_data);
+                free(fiber_info->packet_info->recv_addr);
+                free(fiber_info->start_time);
+                free(fiber_info->packet_info);
+                free(fiber_info);
+            }
+        }
+    }
+}

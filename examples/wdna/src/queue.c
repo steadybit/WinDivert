@@ -48,3 +48,18 @@ LPVOID dequeue(QUEUE* q) {
 	free(temp);
 	return data;
 }
+
+
+LPVOID peak(QUEUE* q) {
+	WaitForSingleObject(q->mtx, INFINITE);
+	if (q->front == NULL) {
+		ReleaseMutex(q->mtx);
+		return NULL;
+	}
+
+	NODE* temp = q->front;
+	LPVOID data = temp->data;
+
+	ReleaseMutex(q->mtx);
+	return data;
+}
