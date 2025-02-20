@@ -147,6 +147,8 @@ typedef struct wdna_opts {
     QUEUE* queue;
     const char* mode;
     UINT* delay_time;
+    UINT* percentage;
+    bool jitter;
     HANDLE* wd_handle;
 } WDNA_OPTS;
 
@@ -162,6 +164,7 @@ int __cdecl main(int argc, char **argv)
     const char* mode = NULL;
     UINT delay_time;
     bool time_taken = false;
+    bool jitter = false;
     cag_option_context context;
     cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
     while (cag_option_fetch(&context)) {
@@ -188,6 +191,10 @@ int __cdecl main(int argc, char **argv)
             }
             time_taken = true;
             break;
+        }
+
+        case 'j': {
+            jitter = true;
         }
 
         case 'h':
@@ -238,7 +245,7 @@ int __cdecl main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    WDNA_OPTS opts = { &packet_queue, mode, &delay_time, &handle };
+    WDNA_OPTS opts = { &packet_queue, mode, &delay_time, NULL, jitter, &handle };
     DWORD processing_thread_id;
     HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
 
@@ -438,7 +445,27 @@ typedef struct fiber_info {
     HANDLE* wd_handle;
     LARGE_INTEGER* start_time;
     UINT* delay_time;
+    bool jitter;
 } FIBER_INFO;
+
+/*
+    Returns time in ms with jitter applied. Jitter applies 'jitter_p' percentage of time.
+*/
+UINT Jitter(UINT* default_time, UINT8 jitter_p) {
+    UINT8 jitter_chance = rand() % 100;
+
+    if (jitter_chance < jitter_p) {
+        UINT8 plus_minus = rand() % 2;
+
+        if (plus_minus == 0) {
+        }
+        else {
+
+        }
+    }
+    
+    return *default_time;
+}
 
 void FiberDelay(LPVOID lpParam) {
     FIBER_INFO* fiber_info = (FIBER_INFO*)lpParam;
@@ -448,7 +475,7 @@ void FiberDelay(LPVOID lpParam) {
     LARGE_INTEGER end_time, frequency, target_ticks, send_time;
     QueryPerformanceFrequency(&frequency);
     UINT sleep_duration = *fiber_info->delay_time;
-    target_ticks.QuadPart = fiber_info->start_time->QuadPart + (sleep_duration * frequency.QuadPart) / 1000;
+    target_ticks.QuadPart = fiber_info->start_time->QuadPart + ((sleep_duration) * frequency.QuadPart) / 1000;
 
 	while (true){
         QueryPerformanceCounter(&end_time);
@@ -487,6 +514,47 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
     initQueue(&fiber_queue, &mtx);
     printf("Process mode: '%s'", opts->mode);
 
+    if (strcmp(opts->mode, "corrupt") == 0) {
+        PACKET_INFO* packet_info;
+		UINT packet_len;
+		srand((unsigned int)time(NULL));
+        while (true) {
+            if (packet_info = (PACKET_INFO*)dequeue(packet_queue)) {
+                size_t byte_index = rand() % packet_info->packet_len;
+                size_t bit_index = rand() % 8;
+                packet_info->packet_data[byte_index] ^= (1 << bit_index);
+
+                WinDivertHelperCalcChecksums(packet_info->packet_data, packet_info->packet_len, packet_info->recv_addr, 0);
+				WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+
+                free(packet_info->packet_data);
+                free(packet_info->recv_addr);
+                free(packet_info->recv_time);
+            }
+        }
+
+        return 0;
+    } 
+
+    if (strcmp(opts->mode, "drop") == 0) {
+        PACKET_INFO* packet_info;
+		UINT packet_len;
+		srand((unsigned int)time(NULL));
+        while (true) {
+            if (packet_info = (PACKET_INFO*)dequeue(packet_queue)) {
+                UINT8 chance = rand() % 100;
+
+                if (chance > opts->percentage) { // less than this is drop.
+					WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+                }
+
+                free(packet_info->packet_data);
+                free(packet_info->recv_addr);
+                free(packet_info->recv_time);
+            }
+        }
+        return 0;
+    }
     if (strcmp(opts->mode, "delay") == 0) {
         LPVOID main_fiber = ConvertThreadToFiber(NULL);
         PACKET_INFO* packet;
@@ -507,6 +575,7 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
                 fiber_info->main_fiber_address = main_fiber;
                 fiber_info->done = false;
                 fiber_info->start_time = packet->recv_time;
+                fiber_info->jitter = opts->jitter;
                 LPVOID delayFiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberDelay, fiber_info);
                 fiber_info->fiber_address = delayFiber;
                 enqueue(&fiber_queue, fiber_info);
@@ -521,11 +590,11 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
             if (fiber_info->done) {
                 dequeue(&fiber_queue);
                 DeleteFiber(fiber_info->fiber_address);
-                free(fiber_info->packet_info->packet_data);
-                free(fiber_info->packet_info->recv_addr);
-                free(fiber_info->start_time);
-                free(fiber_info->packet_info);
-                free(fiber_info);
+				free(fiber_info->packet_info->packet_data);
+				free(fiber_info->packet_info->recv_addr);
+				free(fiber_info->start_time);
+				free(fiber_info->packet_info);
+				free(fiber_info);
             }
         }
     }
