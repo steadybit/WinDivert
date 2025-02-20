@@ -140,15 +140,17 @@ typedef struct packet_info {
     unsigned char* packet_data;
     UINT packet_len;
     WINDIVERT_ADDRESS* recv_addr;
+    LARGE_INTEGER* recv_time;
 } PACKET_INFO;
 
 typedef struct wdna_opts {
     QUEUE* queue;
     const char* mode;
+    UINT* delay_time;
     HANDLE* wd_handle;
 } WDNA_OPTS;
 
-static void ConsumePackets(WDNA_OPTS* opts);
+static int ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
 static DWORD WINAPI ProcessPackets(LPVOID lpParam);
 /*
@@ -158,6 +160,8 @@ int __cdecl main(int argc, char **argv)
 {
     const char* filter = NULL;
     const char* mode = NULL;
+    UINT delay_time;
+    bool time_taken = false;
     cag_option_context context;
     cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
     while (cag_option_fetch(&context)) {
@@ -166,13 +170,25 @@ int __cdecl main(int argc, char **argv)
             filter = cag_option_get_value(&context);
             break;
 
-        case 'm':
+        case 'm': {
             mode = cag_option_get_value(&context);
             if (strcmp("drop", mode) != 0 && strcmp("delay", mode) != 0 && strcmp("corrupt", mode) != 0) {
                 printf("Invalid mode '%s'. Allowed modes are: 'drop', 'delay', 'corrupt'.\n", mode);
                 return 1;
             }
             break;
+        }
+        case 't': {
+			const char* delay_time_str = NULL;
+            delay_time_str = cag_option_get_value(&context);
+            delay_time = strtoul(delay_time_str, NULL, 10);
+            if (errno != 0) {
+                printf("Invalid delay time: %s\n", delay_time_str);
+                return 1;
+            }
+            time_taken = true;
+            break;
+        }
 
         case 'h':
             cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
@@ -187,6 +203,11 @@ int __cdecl main(int argc, char **argv)
 
     if (mode == NULL) {
         printf("Mode must not be empty.");
+        return 1;
+    }
+
+    if (time_taken == false && strcmp("delay", mode) == 0) {
+        printf("Delay time must not be empty in delay mode.");
         return 1;
     }
 
@@ -217,7 +238,7 @@ int __cdecl main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    WDNA_OPTS opts = { &packet_queue, mode, &handle };
+    WDNA_OPTS opts = { &packet_queue, mode, &delay_time, &handle };
     DWORD processing_thread_id;
     HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
 
@@ -228,16 +249,18 @@ int __cdecl main(int argc, char **argv)
     return 0;
 }
 
-static void ConsumePackets(WDNA_OPTS* opts) {
+static int ConsumePackets(WDNA_OPTS* opts) {
     unsigned char* packet = (unsigned char*)malloc(MAXBUF * sizeof(unsigned char));
 
     if (packet == NULL) {
         printf("Packet memory allocation failed!\n");
-        return;
+        return 1;
     }
 
     UINT packet_len, recv_len, addr_len;
     WINDIVERT_ADDRESS recv_addr;
+    LARGE_INTEGER frequency;
+    QueryPerformanceFrequency(&frequency);
 
     while (TRUE)
     {
@@ -248,9 +271,18 @@ static void ConsumePackets(WDNA_OPTS* opts) {
             return 1;
         }
 
+		LARGE_INTEGER* start_time = (LARGE_INTEGER*)malloc(sizeof(LARGE_INTEGER));
+
+        if (start_time == NULL) {
+            printf("error: failed to allocate memory for packet receive time.\n");
+            return 1;
+        }
+
+		QueryPerformanceCounter(start_time);
+
         unsigned char* packet_copy = (unsigned char*)malloc(packet_len);
         if (packet_copy == NULL) {
-            printf("error: failed to allocate ememory for packet copy.\n");
+            printf("error: failed to allocate memory for packet copy.\n");
             return 1;
         }
 
@@ -276,12 +308,14 @@ static void ConsumePackets(WDNA_OPTS* opts) {
         packet_info->packet_data = packet_copy;
         packet_info->packet_len = packet_len;
         packet_info->recv_addr = recv_addr_copy;
+        packet_info->recv_time = start_time;
         enqueue(opts->queue, packet_info);
 
 #ifdef _DEBUG
         //PrintPacketQueue(opts->queue);
 #endif
     }
+	return 0;
 }
 
 static void PrintPacketQueue(QUEUE* queue) {
@@ -403,24 +437,31 @@ typedef struct fiber_info {
     PACKET_INFO* packet_info;
     HANDLE* wd_handle;
     LARGE_INTEGER* start_time;
+    UINT* delay_time;
 } FIBER_INFO;
 
 void FiberDelay(LPVOID lpParam) {
     FIBER_INFO* fiber_info = (FIBER_INFO*)lpParam;
+    printf("Start time: %lld\n", fiber_info->start_time->QuadPart);
     WINDIVERT_ADDRESS recv_addr;
     UINT packet_len;
-    LARGE_INTEGER end_time, frequency, target_ticks;
+    LARGE_INTEGER end_time, frequency, target_ticks, send_time;
     QueryPerformanceFrequency(&frequency);
-    DWORD sleep_duration = 500;
+    UINT sleep_duration = *fiber_info->delay_time;
     target_ticks.QuadPart = fiber_info->start_time->QuadPart + (sleep_duration * frequency.QuadPart) / 1000;
 
-    do {
+	while (true){
         QueryPerformanceCounter(&end_time);
+        if (end_time.QuadPart >= target_ticks.QuadPart) {
+            break;
+        }
         SwitchToFiber(fiber_info->main_fiber_address);
-    } while (end_time.QuadPart < target_ticks.QuadPart);
+    } 
 
     PACKET_INFO* packet_info = fiber_info->packet_info;
     WinDivertSend(*fiber_info->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+    QueryPerformanceCounter(&send_time);
+    printf("Sent start time: %lld, end time: %lld, sent time: %lld\n", fiber_info->start_time->QuadPart, end_time.QuadPart, send_time.QuadPart);
     fiber_info->done = true;
     SwitchToFiber(fiber_info->main_fiber_address);
 }
@@ -461,12 +502,11 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 				}
 
                 fiber_info->wd_handle = opts->wd_handle;
+                fiber_info->delay_time = opts->delay_time;
                 fiber_info->packet_info = packet;
                 fiber_info->main_fiber_address = main_fiber;
                 fiber_info->done = false;
-                LARGE_INTEGER* start_time = (LARGE_INTEGER*)malloc(sizeof(LARGE_INTEGER));
-                QueryPerformanceCounter(start_time);
-                fiber_info->start_time = start_time;
+                fiber_info->start_time = packet->recv_time;
                 LPVOID delayFiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberDelay, fiber_info);
                 fiber_info->fiber_address = delayFiber;
                 enqueue(&fiber_queue, fiber_info);
@@ -474,7 +514,7 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 
             FIBER_INFO* fiber_info = (FIBER_INFO*)peak(&fiber_queue);
             if (fiber_info == NULL) {
-                Sleep(1);
+                Sleep(0);
                 continue;
             }
             SwitchToFiber(fiber_info->fiber_address);
@@ -489,4 +529,5 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
             }
         }
     }
+    return 0;
 }
