@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <wdna_utils.h>
 
 typedef struct Node {
 	LPVOID data; 
@@ -12,11 +13,11 @@ typedef struct Queue {
 	HANDLE* mtx;
 } QUEUE;
 
-// 1 2 3 4 5 6 7
-
 void initQueue(QUEUE* q, HANDLE* mtx);
 
 void enqueue(QUEUE* q, LPVOID data);
+
+void enqueueByTime(QUEUE* q, PACKET_INFO* data);
 
 LPVOID dequeue(QUEUE* q);
 

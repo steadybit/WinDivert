@@ -10,5 +10,6 @@
     <ClInclude Include="external\cargs\cargs.h" />
     <ClInclude Include="include\queue.h" />
     <ClInclude Include="include\cli.h" />
+    <ClInclude Include="include\wdna_utils.h" />
   </ItemGroup>
 </Project>

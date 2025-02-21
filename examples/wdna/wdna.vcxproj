@@ -60,6 +60,7 @@
     <ClInclude Include="external\cargs\cargs.h" />
     <ClInclude Include="include\cli.h" />
     <ClInclude Include="include\queue.h" />
+    <ClInclude Include="include\wdna_utils.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <RootNamespace>netfilter</RootNamespace>
@@ -75,7 +76,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildStartupDirectory)\include;$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
