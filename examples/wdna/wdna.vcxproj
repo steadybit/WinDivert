@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\cargs\cargs.c" />
+    <ClCompile Include="src\cli.c" />
     <ClCompile Include="src\queue.c" />
     <ClCompile Include="wdna.c">
       <TreatWarningAsError>false</TreatWarningAsError>
@@ -57,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\cargs\cargs.h" />
+    <ClInclude Include="include\cli.h" />
     <ClInclude Include="include\queue.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

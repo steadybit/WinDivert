@@ -50,8 +50,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cargs.h>
 #include <stdbool.h>
+#include <cli.h>
 
 #include "windivert.h"
 #include <queue.h>
@@ -65,77 +65,6 @@
 #define INET6_ADDRSTRLEN    45
 #define IPPROTO_ICMPV6      58
 
-/*
- * Pre-fabricated packets.
- */
-typedef struct
-{
-    WINDIVERT_IPHDR ip;
-    WINDIVERT_TCPHDR tcp;
-} TCPPACKET, *PTCPPACKET;
-
-typedef struct
-{
-    WINDIVERT_IPV6HDR ipv6;
-    WINDIVERT_TCPHDR tcp;
-} TCPV6PACKET, *PTCPV6PACKET;
-
-typedef struct
-{
-    WINDIVERT_IPHDR ip;
-    WINDIVERT_ICMPHDR icmp;
-    UINT8 data[];
-} ICMPPACKET, *PICMPPACKET;
-
-typedef struct
-{
-    WINDIVERT_IPV6HDR ipv6;
-    WINDIVERT_ICMPV6HDR icmpv6;
-    UINT8 data[];
-} ICMPV6PACKET, *PICMPV6PACKET;
-
-/*
- * Prototypes.
- */
-static void PacketIpInit(PWINDIVERT_IPHDR packet);
-static void PacketIpTcpInit(PTCPPACKET packet);
-static void PacketIpIcmpInit(PICMPPACKET packet);
-static void PacketIpv6Init(PWINDIVERT_IPV6HDR packet);
-static void PacketIpv6TcpInit(PTCPV6PACKET packet);
-static void PacketIpv6Icmpv6Init(PICMPV6PACKET packet);
-
-static struct cag_option options[] = {
-    {.identifier = 'f',
-    .access_letters = "f",
-    .access_name = "filter",
-    .value_name = "FILTER",
-    .description = "WinDivert filter."},
-    {.identifier = 'm',
-    .access_letters = "m",
-    .access_name = "mode",
-    .value_name = "MODE",
-    .description = "One of the three modes: drop|delay|corrupt."},
-    {.identifier = 'j',
-    .access_letters = "j",
-    .access_name = "jitter",
-    .value_name = "JITTER",
-    .description = "[MODE:delay] - random +-30% jitter to network delay."},
-    {.identifier = 't',
-    .access_letters = "t",
-    .access_name = "time",
-    .value_name = "TIME",
-    .description = "[MODE:delay] - how much should traffic be delayed in 'ms'."},
-	 {.identifier = 'h',
-	.access_letters = "h",
-	.access_name = "help",
-	.description = "Shows all options."}
-};
-
-
-typedef struct {
-    LPVOID main;
-};
-
 typedef struct packet_info {
     unsigned char* packet_data;
     UINT packet_len;
@@ -144,82 +73,36 @@ typedef struct packet_info {
 } PACKET_INFO;
 
 typedef struct wdna_opts {
-    QUEUE* queue;
-    const char* mode;
-    UINT* delay_time;
-    UINT* percentage;
-    bool jitter;
     HANDLE* wd_handle;
+    QUEUE* queue;
+    CLI_OPTS* cli_opts;
 } WDNA_OPTS;
+
+typedef struct fiber_info {
+    bool done;
+    LPVOID fiber_address;
+    LPVOID main_fiber_address;
+    PACKET_INFO* packet_info;
+    HANDLE* wd_handle;
+    LARGE_INTEGER* start_time;
+    CLI_OPTS* cli_opts;
+} FIBER_INFO;
 
 static int ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
 static DWORD WINAPI ProcessPackets(LPVOID lpParam);
-/*
- * Entry.
- */
+
 int __cdecl main(int argc, char **argv)
 {
-    const char* filter = NULL;
-    const char* mode = NULL;
-    UINT delay_time;
-    bool time_taken = false;
-    bool jitter = false;
-    cag_option_context context;
-    cag_option_init(&context, options, CAG_ARRAY_SIZE(options), argc, argv);
-    while (cag_option_fetch(&context)) {
-        switch (cag_option_get_identifier(&context)) {
-        case 'f':
-            filter = cag_option_get_value(&context);
-            break;
+    CLI_OPTS cli_opts;
+    InitCLIOpts(&cli_opts);
+    int cli_opts_status = ParseCLIOpts(&cli_opts, argc, argv);
 
-        case 'm': {
-            mode = cag_option_get_value(&context);
-            if (strcmp("drop", mode) != 0 && strcmp("delay", mode) != 0 && strcmp("corrupt", mode) != 0) {
-                printf("Invalid mode '%s'. Allowed modes are: 'drop', 'delay', 'corrupt'.\n", mode);
-                return 1;
-            }
-            break;
-        }
-        case 't': {
-			const char* delay_time_str = NULL;
-            delay_time_str = cag_option_get_value(&context);
-            delay_time = strtoul(delay_time_str, NULL, 10);
-            if (errno != 0) {
-                printf("Invalid delay time: %s\n", delay_time_str);
-                return 1;
-            }
-            time_taken = true;
-            break;
-        }
-
-        case 'j': {
-            jitter = true;
-        }
-
-        case 'h':
-            cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
-            return 0;
-        }
-    }
-
-    if (filter == NULL) {
-        printf("Filter must not be empty.");
+    if (cli_opts_status == 1) {
         return 1;
     }
 
-    if (mode == NULL) {
-        printf("Mode must not be empty.");
-        return 1;
-    }
-
-    if (time_taken == false && strcmp("delay", mode) == 0) {
-        printf("Delay time must not be empty in delay mode.");
-        return 1;
-    }
-
-    printf("Filter: %s\n", filter);
-    
+    PrintCLIOpts(&cli_opts);
     QUEUE packet_queue;
     HANDLE mtx = CreateMutex(NULL, FALSE, NULL);
 
@@ -232,7 +115,7 @@ int __cdecl main(int argc, char **argv)
 
     HANDLE handle;
     int priority = 0;
-    handle = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, (INT16)priority, 0);
+    handle = WinDivertOpen(cli_opts.filter, WINDIVERT_LAYER_NETWORK, (INT16)priority, 0);
     if (handle == INVALID_HANDLE_VALUE)
     {
         if (GetLastError() == ERROR_INVALID_PARAMETER)
@@ -245,7 +128,7 @@ int __cdecl main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    WDNA_OPTS opts = { &packet_queue, mode, &delay_time, NULL, jitter, &handle };
+    WDNA_OPTS opts = { &handle, &packet_queue, &cli_opts };
     DWORD processing_thread_id;
     HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
 
@@ -371,102 +254,6 @@ static void PrintPacketQueue(QUEUE* queue) {
     }
 }
 
-/*
- * Initialize a PACKET.
- */
-static void PacketIpInit(PWINDIVERT_IPHDR packet)
-{
-    memset(packet, 0, sizeof(WINDIVERT_IPHDR));
-    packet->Version = 4;
-    packet->HdrLength = sizeof(WINDIVERT_IPHDR) / sizeof(UINT32);
-    packet->Id = ntohs(0xDEAD);
-    packet->TTL = 64;
-}
-
-/*
- * Initialize a TCPPACKET.
- */
-static void PacketIpTcpInit(PTCPPACKET packet)
-{
-    memset(packet, 0, sizeof(TCPPACKET));
-    PacketIpInit(&packet->ip);
-    packet->ip.Length = htons(sizeof(TCPPACKET));
-    packet->ip.Protocol = IPPROTO_TCP;
-    packet->tcp.HdrLength = sizeof(WINDIVERT_TCPHDR) / sizeof(UINT32);
-}
-
-/*
- * Initialize an ICMPPACKET.
- */
-static void PacketIpIcmpInit(PICMPPACKET packet)
-{
-    memset(packet, 0, sizeof(ICMPPACKET));
-    PacketIpInit(&packet->ip);
-    packet->ip.Protocol = IPPROTO_ICMP;
-}
-
-/*
- * Initialize a PACKETV6.
- */
-static void PacketIpv6Init(PWINDIVERT_IPV6HDR packet)
-{
-    memset(packet, 0, sizeof(WINDIVERT_IPV6HDR));
-    packet->Version = 6;
-    packet->HopLimit = 64;
-}
-
-/*
- * Initialize a TCPV6PACKET.
- */
-static void PacketIpv6TcpInit(PTCPV6PACKET packet)
-{
-    memset(packet, 0, sizeof(TCPV6PACKET));
-    PacketIpv6Init(&packet->ipv6);
-    packet->ipv6.Length = htons(sizeof(WINDIVERT_TCPHDR));
-    packet->ipv6.NextHdr = IPPROTO_TCP;
-    packet->tcp.HdrLength = sizeof(WINDIVERT_TCPHDR) / sizeof(UINT32);
-}
-
-/*
- * Initialize an ICMP PACKET.
- */
-static void PacketIpv6Icmpv6Init(PICMPV6PACKET packet)
-{
-    memset(packet, 0, sizeof(ICMPV6PACKET));
-    PacketIpv6Init(&packet->ipv6);
-    packet->ipv6.NextHdr = IPPROTO_ICMPV6;
-}
-
-typedef struct fiber_info {
-    bool done;
-    LPVOID fiber_address;
-    LPVOID main_fiber_address;
-    PACKET_INFO* packet_info;
-    HANDLE* wd_handle;
-    LARGE_INTEGER* start_time;
-    UINT* delay_time;
-    bool jitter;
-} FIBER_INFO;
-
-/*
-    Returns time in ms with jitter applied. Jitter applies 'jitter_p' percentage of time.
-*/
-UINT Jitter(UINT* default_time, UINT8 jitter_p) {
-    UINT8 jitter_chance = rand() % 100;
-
-    if (jitter_chance < jitter_p) {
-        UINT8 plus_minus = rand() % 2;
-
-        if (plus_minus == 0) {
-        }
-        else {
-
-        }
-    }
-    
-    return *default_time;
-}
-
 void FiberDelay(LPVOID lpParam) {
     FIBER_INFO* fiber_info = (FIBER_INFO*)lpParam;
     printf("Start time: %lld\n", fiber_info->start_time->QuadPart);
@@ -474,7 +261,7 @@ void FiberDelay(LPVOID lpParam) {
     UINT packet_len;
     LARGE_INTEGER end_time, frequency, target_ticks, send_time;
     QueryPerformanceFrequency(&frequency);
-    UINT sleep_duration = *fiber_info->delay_time;
+    UINT sleep_duration = fiber_info->cli_opts->time;
     target_ticks.QuadPart = fiber_info->start_time->QuadPart + ((sleep_duration) * frequency.QuadPart) / 1000;
 
 	while (true){
@@ -512,9 +299,8 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
     }
 
     initQueue(&fiber_queue, &mtx);
-    printf("Process mode: '%s'", opts->mode);
 
-    if (strcmp(opts->mode, "corrupt") == 0) {
+    if (strcmp(opts->cli_opts->mode, "corrupt") == 0) {
         PACKET_INFO* packet_info;
 		UINT packet_len;
 		srand((unsigned int)time(NULL));
@@ -536,7 +322,7 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
         return 0;
     } 
 
-    if (strcmp(opts->mode, "drop") == 0) {
+    if (strcmp(opts->cli_opts->mode, "drop") == 0) {
         PACKET_INFO* packet_info;
 		UINT packet_len;
 		srand((unsigned int)time(NULL));
@@ -544,9 +330,9 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
             if (packet_info = (PACKET_INFO*)dequeue(packet_queue)) {
                 UINT8 chance = rand() % 100;
 
-                if (chance > opts->percentage) { // less than this is drop.
-					WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
-                }
+     //           if (chance > opts->cli_opts->percentage) { // less than this is drop.
+					//WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+     //           }
 
                 free(packet_info->packet_data);
                 free(packet_info->recv_addr);
@@ -555,7 +341,7 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
         }
         return 0;
     }
-    if (strcmp(opts->mode, "delay") == 0) {
+    if (strcmp(opts->cli_opts->mode, "delay") == 0) {
         LPVOID main_fiber = ConvertThreadToFiber(NULL);
         PACKET_INFO* packet;
         LARGE_INTEGER frequency;
@@ -570,12 +356,11 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 				}
 
                 fiber_info->wd_handle = opts->wd_handle;
-                fiber_info->delay_time = opts->delay_time;
                 fiber_info->packet_info = packet;
                 fiber_info->main_fiber_address = main_fiber;
                 fiber_info->done = false;
                 fiber_info->start_time = packet->recv_time;
-                fiber_info->jitter = opts->jitter;
+                fiber_info->cli_opts = opts->cli_opts;
                 LPVOID delayFiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberDelay, fiber_info);
                 fiber_info->fiber_address = delayFiber;
                 enqueue(&fiber_queue, fiber_info);
