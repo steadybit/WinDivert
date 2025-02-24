@@ -65,6 +65,14 @@ void PrintCLIOpts(CLI_OPTS* opts) {
 		printf("Delay time: '%d ms'.\n", opts->time);
 		printf("Jitter: '%s'.\n", boolToString(opts->jitter));
     }
+
+    if (strcmp(opts->mode, "corrupt") == 0) {
+        printf("Corrupt percentage: '%d'.\n", opts->percentage);
+    }
+
+    if (strcmp(opts->mode, "drop") == 0) {
+        printf("Drop percentage: '%d'.\n", opts->percentage);
+    }
 }
 
 int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
@@ -90,6 +98,11 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
             opts->duration = strtoul(duration_str, NULL, 10);
             if (errno != 0) {
                 printf("Invalid duration: '%s'.\n", duration_str);
+                return 1;
+            }
+
+            if (opts->duration == 0) {
+                printf("Invalid delay time: '%s'.\n", duration_str);
                 return 1;
             }
             opts->flags |= CLI_OPTS_DURATION_SET;
