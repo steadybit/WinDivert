@@ -70,6 +70,7 @@ typedef struct wdna_opts {
 	HANDLE* wd_handle;
 	QUEUE* queue;
 	CLI_OPTS* cli_opts;
+	LARGE_INTEGER* end_time;
 } WDNA_OPTS;
 
 typedef struct fiber_info {
@@ -97,6 +98,13 @@ int __cdecl main(int argc, char **argv)
 	}
 
 	PrintCLIOpts(&cli_opts);
+
+	LARGE_INTEGER end_time, start_time, frequency;
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start_time);
+
+	end_time.QuadPart = start_time.QuadPart + ((cli_opts.duration * 1000) * frequency.QuadPart) / 1000;
+
 	QUEUE packet_queue;
 	HANDLE mtx = CreateMutex(NULL, FALSE, NULL);
 
@@ -122,7 +130,7 @@ int __cdecl main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	WDNA_OPTS opts = { &handle, &packet_queue, &cli_opts };
+	WDNA_OPTS opts = { &handle, &packet_queue, &cli_opts, &end_time };
 	DWORD processing_thread_id;
 	HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
 
@@ -132,9 +140,9 @@ int __cdecl main(int argc, char **argv)
 	}
 
 	ConsumePackets(&opts);
+	MAIN_THREAD_FINISHED = true;
 	WaitForSingleObject(processing_thread, INFINITE);
 	CloseHandle(processing_thread);
-	printf("Stopping the execution.");
 	return 0;
 }
 
@@ -148,7 +156,7 @@ static int ConsumePackets(WDNA_OPTS* opts) {
 
 	UINT packet_len, recv_len, addr_len;
 	WINDIVERT_ADDRESS recv_addr;
-	LARGE_INTEGER frequency;
+	LARGE_INTEGER frequency, current_time;
 	QueryPerformanceFrequency(&frequency);
 
 	while (TRUE)
@@ -237,6 +245,11 @@ static int ConsumePackets(WDNA_OPTS* opts) {
 			enqueue(opts->queue, packet_info);
 		}
 
+		QueryPerformanceCounter(&current_time);
+		if (current_time.QuadPart > opts->end_time->QuadPart) {
+			printf("'%d s' has passed. Shutting down the attack.", opts->cli_opts->duration);
+			break;
+		}
 #ifdef _DEBUG
 		PrintPacketQueue(opts->queue);
 #endif
@@ -340,19 +353,28 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 		UINT packet_len;
 		while (true) {
 			if (packet_info = (PACKET_INFO*)dequeue(packet_queue)) {
-				size_t byte_index = rand() % packet_info->packet_len;
-				size_t bit_index = rand() % 8;
-				packet_info->packet_data[byte_index] ^= (1 << bit_index);
+				unsigned int chance = rand() % 100;
 
-				WinDivertHelperCalcChecksums(packet_info->packet_data, packet_info->packet_len, packet_info->recv_addr, 0);
+				if (chance < opts->cli_opts->percentage) {
+					size_t byte_index = rand() % packet_info->packet_len;
+					size_t bit_index = rand() % 8;
+					packet_info->packet_data[byte_index] ^= (1 << bit_index);
+
+					WinDivertHelperCalcChecksums(packet_info->packet_data, packet_info->packet_len, packet_info->recv_addr, 0);
+				}
+
 				WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
 
 				free(packet_info->packet_data);
 				free(packet_info->recv_addr);
-				free(packet_info->recv_time);
+
+				if (MAIN_THREAD_FINISHED) {
+					break;
+				}
 			}
 		}
 
+		printf("Closing down the processing thread.");
 		return 0;
 	} 
 
@@ -363,17 +385,21 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 			if (packet_info = (PACKET_INFO*)dequeue(packet_queue)) {
 				UINT8 chance = rand() % 100;
 
-	 //           if (chance > opts->cli_opts->percentage) { // less than this is drop.
-					//WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
-	 //           }
+	            if (chance >= opts->cli_opts->percentage) { // less than this is drop.
+					WinDivertSend(*opts->wd_handle, packet_info->packet_data, packet_info->packet_len, &packet_len, packet_info->recv_addr);
+	            }
 
 				free(packet_info->packet_data);
 				free(packet_info->recv_addr);
-				free(packet_info->recv_time);
+
+				if (MAIN_THREAD_FINISHED) {
+					break;
+				}
 			}
 		}
 		return 0;
 	}
+
 	if (strcmp(opts->cli_opts->mode, "delay") == 0) {
 		LPVOID main_fiber = ConvertThreadToFiber(NULL);
 		PACKET_INFO* packet;
@@ -413,6 +439,10 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 				free(fiber_info->packet_info->recv_time);
 				free(fiber_info->packet_info);
 				free(fiber_info);
+			}
+
+			if (MAIN_THREAD_FINISHED) {
+				break;
 			}
 		}
 	}

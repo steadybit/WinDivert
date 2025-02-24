@@ -30,6 +30,11 @@ static struct cag_option options[] = {
     .access_name = "duration",
     .value_name = "DURATION",
     .description = "Amount of time the attack is going to run in 's'."},
+    {.identifier = 'p',
+    .access_letters = "p",
+    .access_name = "percentage",
+    .value_name = "PERCENTAGE",
+    .description = "[MODE:drop] - percentage of packets to drop.\n[MODE:corrupt] - percentage of packets to corrupt."},
 };
 
 
@@ -95,7 +100,12 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
             delay_time_str = cag_option_get_value(&context);
             opts->time = strtoul(delay_time_str, NULL, 10);
             if (errno != 0) {
-                printf("Invalid delay time: %s\n", delay_time_str);
+                printf("Invalid delay time: '%s'.\n", delay_time_str);
+                return 1;
+            }
+
+            if (opts->time == 0 || opts->time > 100) {
+                printf("Invalid delay time: '%s'.\n", delay_time_str);
                 return 1;
             }
             opts->flags |= CLI_OPTS_TIME_SET;
@@ -104,6 +114,23 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
 
         case 'j': {
             opts->jitter = true;
+            break;
+        }
+
+        case 'p': {
+            const char* percentage_str = NULL;
+            percentage_str = cag_option_get_value(&context);
+            opts->percentage= strtoul(percentage_str, NULL, 10);
+            if (errno != 0) {
+                printf("Invalid percentage amount: '%s'.\n", percentage_str);
+                return 1;
+            }
+            if (opts->percentage == 0 || opts->percentage> 100) {
+                printf("Invalid delay time: '%s'.\n", percentage_str);
+                return 1;
+            }
+
+            opts->flags |= CLI_OPTS_PERCETAGE_SET;
             break;
         }
 
@@ -130,6 +157,16 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
 
     if (strcmp("delay", opts->mode) == 0 && !(opts->flags & CLI_OPTS_TIME_SET)) {
         printf("Delay time must not be empty in delay mode.");
+        return 1;
+    }
+
+    if (strcmp("drop", opts->mode) == 0 && !(opts->flags & CLI_OPTS_PERCETAGE_SET)) {
+        printf("Drop percentage must not be empty in drop mode.");
+        return 1;
+    }
+
+    if (strcmp("corrupt", opts->mode) == 0 && !(opts->flags & CLI_OPTS_PERCETAGE_SET)) {
+        printf("Corrupt percentage must not be empty in corrupt mode.");
         return 1;
     }
 

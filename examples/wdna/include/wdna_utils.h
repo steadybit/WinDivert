@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <windivert.h>
+#include <stdbool.h>
 
 typedef struct packet_info {
 	unsigned char* packet_data;
@@ -9,3 +10,5 @@ typedef struct packet_info {
 	LARGE_INTEGER* recv_time;
 	LARGE_INTEGER* target_time;
 } PACKET_INFO;
+
+extern bool MAIN_THREAD_FINISHED;

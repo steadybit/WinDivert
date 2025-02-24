@@ -2,6 +2,7 @@
 #include <cargs.h>
 #define CLI_OPTS_DURATION_SET (1 << 0)
 #define CLI_OPTS_TIME_SET (1 << 1)
+#define CLI_OPTS_PERCETAGE_SET (1 << 2)
 
 typedef struct cli_opts {
 	const char* filter;
@@ -10,6 +11,7 @@ typedef struct cli_opts {
 	bool jitter; // [MODE: delay] - Adds a +-30% jitter to each packet.
 	unsigned int duration; // Amount of time the attack is going to run.
 	unsigned int flags;
+	unsigned int percentage;
 } CLI_OPTS;
 
 void InitCLIOpts(CLI_OPTS* opts);
