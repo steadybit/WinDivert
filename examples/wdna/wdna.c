@@ -93,8 +93,8 @@ int __cdecl main(int argc, char **argv)
 	InitCLIOpts(&cli_opts);
 	int cli_opts_status = ParseCLIOpts(&cli_opts, argc, argv);
 
-	if (cli_opts_status == 1) {
-		return 1;
+	if (cli_opts_status != 0) {
+		return cli_opts_status;
 	}
 
 	PrintCLIOpts(&cli_opts);

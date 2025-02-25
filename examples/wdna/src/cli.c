@@ -34,7 +34,7 @@ static struct cag_option options[] = {
     .access_letters = "p",
     .access_name = "percentage",
     .value_name = "PERCENTAGE",
-    .description = "[MODE:drop] - percentage of packets to drop.\n[MODE:corrupt] - percentage of packets to corrupt."},
+    .description = "[MODE:drop] - percentage of packets to drop. [MODE:corrupt] - percentage of packets to corrupt."},
 };
 
 
@@ -149,7 +149,7 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
 
         case 'h':
             cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
-            return 0;
+            return 2;
         }
     }
 
