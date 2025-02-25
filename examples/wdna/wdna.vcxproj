@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
 
-    netdump.vcxproj
+    netfilter.vcxproj
     (C) 2019, all rights reserved,
     
     This file is part of WinDivert.
@@ -46,17 +46,27 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="netdump.c">
+    <ClCompile Include="external\cargs\cargs.c" />
+    <ClCompile Include="src\cli.c" />
+    <ClCompile Include="src\queue.c" />
+    <ClCompile Include="src\wdna_utils.c" />
+    <ClCompile Include="wdna.c">
       <TreatWarningAsError>false</TreatWarningAsError>
       <Optimization>MinSpace</Optimization>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <AdditionalIncludeDirectories>..\..\include</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\cargs\cargs.h" />
+    <ClInclude Include="include\cli.h" />
+    <ClInclude Include="include\queue.h" />
+    <ClInclude Include="include\wdna_utils.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <RootNamespace>netdump</RootNamespace>
-    <ProjectName>netdump</ProjectName>
-    <ProjectGuid>{705B7EB6-0A89-4D67-B308-1D7DC22160F2}</ProjectGuid>
+    <RootNamespace>netfilter</RootNamespace>
+    <ProjectName>wdna</ProjectName>
+    <ProjectGuid>{FC4C4581-C997-4AE9-AFED-01C4AD9119D7}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -67,9 +77,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>$(MSBuildStartupDirectory)\include;$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
+    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
@@ -77,7 +89,13 @@
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\install\MSVC\i386\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\WinDivert.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateDebugInformation>
     </Link>
+    <ClCompile>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">EnableFastChecks</BasicRuntimeChecks>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
