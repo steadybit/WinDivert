@@ -87,6 +87,7 @@ This is a version of WinDivert used for Windows Steadybit extensions.
 
 - [Visual Studio 2022](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-visual-studio-step-1-install-visual-studio-2022)
 - [Windows Driver Kit](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-sdk-step-2-install-sdk)
+  - The Windows Driver Kit requires Visual Studio components and complains if they are absent. Before continuing, modify the Visual Studio installation accordingly.
 - [Windows SDK](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk#download-icon-for-wdk-step-3-install-wdk)
 
 5. Good to Know 
