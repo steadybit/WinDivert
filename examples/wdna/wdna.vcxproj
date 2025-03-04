@@ -81,7 +81,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(Configuration)\</OutDir>
-    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildProjectDirectory)\include\;$(MSBuildProjectDirectory)\external\cargs;$(MSBuildStartupDirectory)\include\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>

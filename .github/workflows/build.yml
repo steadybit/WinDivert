@@ -2,13 +2,58 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build Configuration (Debug/Release)'
+        required: false
+        default: 'Debug'
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Build Driver
-        run: echo Replace Me !
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: x64
+
+      - name: Build WinDivert
+        run: scripts/build-windivert.ps1
+
+      - name: Build WDNA
+        run: scripts/build-wdna.ps1
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-${{ github.event.inputs.configuration }}
+          path: |
+            output/x64/${{ github.event.inputs.configuration }}/*.exe
+            output/x64/${{ github.event.inputs.configuration }}/*.dll
+            output/x64/${{ github.event.inputs.configuration }}/*.sys
+          retention-days: 7
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: true
+          prerelease: ${{ github.event.inputs.configuration != Release }}
+          fail_on_unmatched_files: true
+          files: |
+            output/x64/${{ github.event.inputs.configuration }}/*.exe
+            output/x64/${{ github.event.inputs.configuration }}/*.dll
+            output/x64/${{ github.event.inputs.configuration }}/*.sys

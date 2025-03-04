@@ -101,6 +101,7 @@
     <Inf2CatNoCatalog>false</Inf2CatNoCatalog>
     <TimeStampServer />
     <TargetName>WinDivert64</TargetName>
+    <SignMode>TestSign</SignMode>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
