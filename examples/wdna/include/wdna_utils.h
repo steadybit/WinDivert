@@ -11,4 +11,5 @@ typedef struct packet_info {
 	LARGE_INTEGER* target_time;
 } PACKET_INFO;
 
-extern bool MAIN_THREAD_FINISHED;
+extern bool TERMINATE_THREADS;
+extern bool MAIN_TERMINATED;

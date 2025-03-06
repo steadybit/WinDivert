@@ -85,10 +85,13 @@ typedef struct fiber_info {
 static int ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
 static DWORD WINAPI ProcessPackets(LPVOID lpParam);
+static DWORD WINAPI Terminate(LPVOID lpParam);
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
 
 int __cdecl main(int argc, char **argv)
 {
 	srand(time(NULL));
+	SetConsoleCtrlHandler(CtrlHandler, TRUE);
 	CLI_OPTS cli_opts;
 	InitCLIOpts(&cli_opts);
 	int cli_opts_status = ParseCLIOpts(&cli_opts, argc, argv);
@@ -139,8 +142,16 @@ int __cdecl main(int argc, char **argv)
 		return 1;
 	}
 
+	DWORD terminate_thread_id;
+	HANDLE terminate_thread = CreateThread(NULL, 0, Terminate, &opts, 0, &terminate_thread_id);
+
+	if (terminate_thread == NULL) {
+		printf("error: failed to create a termination thread.");
+		return 1;
+	}
+
+
 	ConsumePackets(&opts);
-	MAIN_THREAD_FINISHED = true;
 	WaitForSingleObject(processing_thread, INFINITE);
 	CloseHandle(processing_thread);
 	return 0;
@@ -156,13 +167,20 @@ static int ConsumePackets(WDNA_OPTS* opts) {
 
 	UINT packet_len, recv_len, addr_len;
 	WINDIVERT_ADDRESS recv_addr;
-	LARGE_INTEGER frequency, current_time;
+	LARGE_INTEGER frequency;
 	QueryPerformanceFrequency(&frequency);
 
 	while (TRUE)
 	{
 		if (!WinDivertRecv(*opts->wd_handle, packet, MAXBUF, &packet_len,
 			&recv_addr)) {
+			DWORD last_error = GetLastError();
+
+			if (last_error == ERROR_NO_DATA) {
+				MAIN_TERMINATED = true;
+				return 0;
+			}
+
 			fprintf(stderr, "warning: failed to read packet (%d)\n",
 				GetLastError());
 			return 1;
@@ -244,15 +262,6 @@ static int ConsumePackets(WDNA_OPTS* opts) {
 		else {
 			enqueue(opts->queue, packet_info);
 		}
-
-		QueryPerformanceCounter(&current_time);
-		if (current_time.QuadPart > opts->end_time->QuadPart) {
-			printf("'%d s' has passed. Shutting down the attack.", opts->cli_opts->duration);
-			break;
-		}
-#ifdef _DEBUG
-		PrintPacketQueue(opts->queue);
-#endif
 	}
 	return 0;
 }
@@ -340,6 +349,7 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 	QUEUE* packet_queue = opts->queue;
 	QUEUE fiber_queue;
 	HANDLE mtx = CreateMutex(NULL, FALSE, NULL);
+	bool shutdown_initiated = false;
 
 	if (mtx == NULL) {
 		printf("error: create mutex failed %d.\n", GetLastError());
@@ -367,14 +377,26 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 
 				free(packet_info->packet_data);
 				free(packet_info->recv_addr);
+			}
+			else {
+				// Terminate only after all of the packets in the queue have been sent.
+				if (TERMINATE_THREADS && !shutdown_initiated) {
+#ifdef _DEBUG
+					printf("warn: shutdown initiated. \n");
+#endif
+					shutdown_initiated = true;
+					WinDivertShutdown(*opts->wd_handle, WINDIVERT_SHUTDOWN_RECV);
+				}
 
-				if (MAIN_THREAD_FINISHED) {
+				if (TERMINATE_THREADS && MAIN_TERMINATED && peak(packet_queue) == NULL) {
+#ifdef _DEBUG
+					printf("warn: terminated processing. \n");
+#endif
 					break;
 				}
 			}
 		}
 
-		printf("Closing down the processing thread.");
 		return 0;
 	} 
 
@@ -391,8 +413,21 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 
 				free(packet_info->packet_data);
 				free(packet_info->recv_addr);
+			}
+			else {
+				// Terminate only after all of the packets in the queue have been sent.
+				if (TERMINATE_THREADS && !shutdown_initiated) {
+#ifdef _DEBUG
+					printf("warn: shutdown initiated. \n");
+#endif
+					shutdown_initiated = true;
+					WinDivertShutdown(*opts->wd_handle, WINDIVERT_SHUTDOWN_RECV);
+				}
 
-				if (MAIN_THREAD_FINISHED) {
+				if (TERMINATE_THREADS && MAIN_TERMINATED && peak(packet_queue) == NULL) {
+#ifdef _DEBUG
+					printf("warn: terminated processing. \n");
+#endif
 					break;
 				}
 			}
@@ -422,6 +457,22 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 				LPVOID delayFiber = CreateFiber(0, (LPFIBER_START_ROUTINE)FiberDelay, fiber_info);
 				fiber_info->fiber_address = delayFiber;
 				enqueue(&fiber_queue, fiber_info);
+			} else {
+				// Terminate only after all of the packets in the queue have been sent.
+				if (TERMINATE_THREADS && !shutdown_initiated) {
+#ifdef _DEBUG
+					printf("warn: shutdown initiated. \n");
+#endif
+					shutdown_initiated = true;
+					WinDivertShutdown(*opts->wd_handle, WINDIVERT_SHUTDOWN_RECV);
+				}
+
+				if (TERMINATE_THREADS && MAIN_TERMINATED && peak(packet_queue) == NULL && peak(&fiber_queue) == NULL) {
+#ifdef _DEBUG
+					printf("warn: terminated processing. \n");
+#endif
+					break;
+				}
 			}
 
 			FIBER_INFO* fiber_info = (FIBER_INFO*)peak(&fiber_queue);
@@ -441,10 +492,61 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 				free(fiber_info);
 			}
 
-			if (MAIN_THREAD_FINISHED) {
-				break;
-			}
 		}
 	}
 	return 0;
+}
+
+
+static DWORD WINAPI Terminate(LPVOID lpParam) {
+	WDNA_OPTS* opts = (WDNA_OPTS*)lpParam;
+
+	Sleep(opts->cli_opts->duration * 1000);
+	TERMINATE_THREADS = true;
+
+	return 0;
+}
+
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+	switch (fdwCtrlType) {
+		case CTRL_C_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL C\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_CLOSE_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL CLOSE\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_BREAK_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL BREAK\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_LOGOFF_EVENT:
+#ifdef _DEBUG
+			printf("Handled LOGOFF\n");
+#endif
+			return FALSE;
+
+		case CTRL_SHUTDOWN_EVENT:
+#ifdef _DEBUG
+			printf("Handled SHUTDOWN\n");
+#endif
+			return FALSE;
+
+		default:
+#ifdef _DEBUG
+			printf("Handled DEFAULT\n");
+#endif
+			return FALSE;
+	}
 }
