@@ -117,7 +117,7 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
                 return 1;
             }
 
-            if (opts->time == 0 || opts->time > 100) {
+            if (opts->time == 0) {
                 printf("Invalid delay time: '%s'.\n", delay_time_str);
                 return 1;
             }
