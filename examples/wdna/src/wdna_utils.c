@@ -1,3 +1,4 @@
 #include <wdna_utils.h>
 
-bool MAIN_THREAD_FINISHED = false;
+bool TERMINATE_THREADS = false;
+bool MAIN_TERMINATED = false;
