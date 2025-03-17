@@ -591,3 +591,47 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
 			return FALSE;
 	}
 }
+
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+	switch (fdwCtrlType) {
+		case CTRL_C_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL C\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_CLOSE_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL CLOSE\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_BREAK_EVENT:
+#ifdef _DEBUG
+			printf("Handled CTRL BREAK\n");
+#endif
+			TERMINATE_THREADS = true;
+			return TRUE;
+
+		case CTRL_LOGOFF_EVENT:
+#ifdef _DEBUG
+			printf("Handled LOGOFF\n");
+#endif
+			return FALSE;
+
+		case CTRL_SHUTDOWN_EVENT:
+#ifdef _DEBUG
+			printf("Handled SHUTDOWN\n");
+#endif
+			return FALSE;
+
+		default:
+#ifdef _DEBUG
+			printf("Handled DEFAULT\n");
+#endif
+			return FALSE;
+	}
+}
