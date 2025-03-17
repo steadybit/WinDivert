@@ -33,6 +33,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wdna", "examples\wdna\wdna.
 		{8F96020E-79AE-49CF-B796-7DB9F3264854} = {8F96020E-79AE-49CF-B796-7DB9F3264854}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wdna_shutdown", "examples\wdnashutdown\wdnashutdown.vcxproj", "{8A514B52-1E3D-43F1-B68D-5F9115740351}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -92,6 +94,10 @@ Global
 		{FC4C4581-C997-4AE9-AFED-01C4AD9119D7}.Debug|x64.Build.0 = Debug|x64
 		{FC4C4581-C997-4AE9-AFED-01C4AD9119D7}.Release|x64.ActiveCfg = Release|x64
 		{FC4C4581-C997-4AE9-AFED-01C4AD9119D7}.Release|x64.Build.0 = Release|x64
+		{8A514B52-1E3D-43F1-B68D-5F9115740351}.Debug|x64.ActiveCfg = Debug|x64
+		{8A514B52-1E3D-43F1-B68D-5F9115740351}.Debug|x64.Build.0 = Debug|x64
+		{8A514B52-1E3D-43F1-B68D-5F9115740351}.Release|x64.ActiveCfg = Release|x64
+		{8A514B52-1E3D-43F1-B68D-5F9115740351}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
