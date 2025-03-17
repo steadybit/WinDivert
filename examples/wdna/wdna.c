@@ -247,7 +247,7 @@ static int ConsumePackets(WDNA_OPTS* opts) {
 			unsigned int wait_time = opts->cli_opts->time;
 
 			if (opts->cli_opts->jitter) {
-				unsigned int jitter = 0.3 * opts->cli_opts->time;
+				unsigned int jitter = rand() % (int)(0.3 * opts->cli_opts->time + 1);
 				unsigned int operation = rand() % 2;
 
 				if (operation == 0) {
