@@ -56,6 +56,7 @@
 #include <windivert.h>
 #include <wdna_utils.h>
 #include <queue.h>
+#include <mailslot.h>
 
 #define ntohs(x)            WinDivertHelperNtohs(x)
 #define ntohl(x)            WinDivertHelperNtohl(x)
@@ -86,6 +87,7 @@ static int ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
 static DWORD WINAPI ProcessPackets(LPVOID lpParam);
 static DWORD WINAPI Terminate(LPVOID lpParam);
+static DWORD WINAPI Mailslot(LPVOID lpParam);
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
 
 int __cdecl main(int argc, char **argv)
@@ -134,6 +136,15 @@ int __cdecl main(int argc, char **argv)
 	}
 
 	WDNA_OPTS opts = { &handle, &packet_queue, &cli_opts, &end_time };
+
+	DWORD mailslot_thread_id;
+	HANDLE mailslot_thread = CreateThread(NULL, 0, Mailslot, &opts, 0, &mailslot_thread_id);
+
+	if (mailslot_thread == NULL) {
+		printf("error: failed to create a packet processing thread.");
+		return 1;
+	}
+
 	DWORD processing_thread_id;
 	HANDLE processing_thread = CreateThread(NULL, 0, ProcessPackets, &opts, 0, &processing_thread_id);
 
@@ -507,6 +518,36 @@ static DWORD WINAPI Terminate(LPVOID lpParam) {
 	return 0;
 }
 
+static DWORD WINAPI Mailslot(LPVOID lpParam) {
+	HANDLE mail_slot;
+	LPCTSTR slot_name = TEXT("\\\\.\\mailslot\\steadybit\\wdna");
+
+	if (!MakeSlot(&mail_slot, slot_name)) {
+		return 1;
+	}
+
+	while (true) {
+		DWORD result = ReadSlot(&mail_slot);
+
+		if (result == MAILSLOT_ERROR) {
+			TERMINATE_THREADS = true;
+			return 1;
+		}
+
+		if (result == MAILSLOT_EMPTY) {
+			Sleep(1000);
+			continue;
+		}
+
+		if (result == MAILSLOT_RECEIVE) {
+			break;
+		}
+	}
+
+	TERMINATE_THREADS = true;
+	CloseHandle(mail_slot);
+	return 0;
+}
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
 	switch (fdwCtrlType) {

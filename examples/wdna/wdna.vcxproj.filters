@@ -6,11 +6,13 @@
     <ClCompile Include="src\queue.c" />
     <ClCompile Include="src\cli.c" />
     <ClCompile Include="src\wdna_utils.c" />
+    <ClCompile Include="src\mailslot.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\cargs\cargs.h" />
     <ClInclude Include="include\queue.h" />
     <ClInclude Include="include\cli.h" />
     <ClInclude Include="include\wdna_utils.h" />
+    <ClInclude Include="include\mailslot.h" />
   </ItemGroup>
 </Project>
