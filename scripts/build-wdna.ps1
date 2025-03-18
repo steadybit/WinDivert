@@ -7,6 +7,6 @@ if ($args.Count -eq 0) {
     $config = $args[0]
 }
 
-Write-Host "Building WDNA in $config configuratio"
+Write-Host "Building 'WDNA' in $config configuration"
 
 msbuild "examples\wdna\wdna.vcxproj" /v:d /p:Configuration=$config /p:Platform=x64 /p:OutDir="..\..\output\x64\$config\"

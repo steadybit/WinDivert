@@ -33,7 +33,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wdna", "examples\wdna\wdna.
 		{8F96020E-79AE-49CF-B796-7DB9F3264854} = {8F96020E-79AE-49CF-B796-7DB9F3264854}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wdna_shutdown", "examples\wdnashutdown\wdnashutdown.vcxproj", "{8A514B52-1E3D-43F1-B68D-5F9115740351}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wdna_shutdown", "examples\wdna_shutdown\wdna_shutdown.vcxproj", "{8A514B52-1E3D-43F1-B68D-5F9115740351}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
