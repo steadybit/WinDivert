@@ -503,8 +503,7 @@ static void windivert_log_event(PEPROCESS process, PDRIVER_OBJECT driver,
  * WinDivert provider GUIDs
  */
 DEFINE_GUID(WINDIVERT_PROVIDER_GUID,
-    0x450EC398, 0x1EAF, 0x49F5,
-    0x85, 0xE0, 0x22, 0x8F, 0x0D, 0x29, 0x39, 0x21);
+ 0x544a6fd8, 0x73d6, 0x481b, 0x85, 0x74, 0x2b, 0xc9, 0x68, 0x16, 0xbd, 0xbd);
 #define WINDIVERT_PROVIDER_NAME WINDIVERT_DEVICE_NAME
 #define WINDIVERT_PROVIDER_DESC WINDIVERT_DEVICE_NAME L" provider"
 
