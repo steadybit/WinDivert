@@ -83,6 +83,7 @@ typedef struct fiber_info {
 	CLI_OPTS* cli_opts;
 } FIBER_INFO;
 
+static const char* ReadFileContent(const char* filename);
 static int ConsumePackets(WDNA_OPTS* opts);
 static void PrintPacketQueue(QUEUE* queue);
 static DWORD WINAPI ProcessPackets(LPVOID lpParam);
@@ -104,6 +105,13 @@ int __cdecl main(int argc, char **argv)
 
 	PrintCLIOpts(&cli_opts);
 
+    const char* filter = ReadFileContent(cli_opts.file);
+    if (filter == NULL) {
+        printf("error: reading content of filter file %s.\n", cli_opts.file);
+        return 1;
+    }
+    printf("Filter: '%s'\n", filter);
+
 	LARGE_INTEGER end_time, start_time, frequency;
 	QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&start_time);
@@ -122,7 +130,7 @@ int __cdecl main(int argc, char **argv)
 
 	HANDLE handle;
 	int priority = 0;
-	handle = WinDivertOpen(cli_opts.filter, WINDIVERT_LAYER_NETWORK, (INT16)priority, 0);
+	handle = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, (INT16)priority, 0);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		if (GetLastError() == ERROR_INVALID_PARAMETER)
@@ -508,7 +516,37 @@ static DWORD WINAPI ProcessPackets(LPVOID lpParam) {
 	return 0;
 }
 
+static const char* ReadFileContent(const char* filename)
+{
+	FILE* file = fopen(filename, "rb");
+	if (file == NULL) {
+		fprintf(stderr, "error: failed to open file %s\n", filename);
+		return NULL;
+	}
 
+	fseek(file, 0, SEEK_END);
+	long file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	// Allocate memory for the entire file content plus null terminator
+	char* buffer = (char*)malloc(file_size + 1);
+	if (buffer == NULL) {
+		fprintf(stderr, "error: failed to allocate memory for file content\n");
+		fclose(file);
+		return NULL;
+	}
+
+	size_t read_size = fread(buffer, 1, file_size, file);
+	fclose(file);
+
+	if (read_size != file_size) {
+		fprintf(stderr, "error: failed to read complete file content\n");
+		free(buffer);
+		return NULL;
+	}
+	buffer[file_size] = '\0';
+	return buffer;
+}
 static DWORD WINAPI Terminate(LPVOID lpParam) {
 	WDNA_OPTS* opts = (WDNA_OPTS*)lpParam;
 
