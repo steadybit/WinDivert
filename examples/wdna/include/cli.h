@@ -5,7 +5,7 @@
 #define CLI_OPTS_PERCETAGE_SET (1 << 2)
 
 typedef struct cli_opts {
-	const char* filter;
+	const char* file;
 	const char* mode;
 	unsigned int time; // [MODE: delay] - Amount of time each packet is going to be delayed.
 	bool jitter; // [MODE: delay] - Adds a +-30% jitter to each packet.

@@ -3,9 +3,9 @@
 static struct cag_option options[] = {
     {.identifier = 'f',
     .access_letters = "f",
-    .access_name = "filter",
-    .value_name = "FILTER",
-    .description = "WinDivert filter."},
+    .access_name = "file",
+    .value_name = "FILE",
+    .description = "WinDivert filter file"},
     {.identifier = 'm',
     .access_letters = "m",
     .access_name = "mode",
@@ -39,7 +39,7 @@ static struct cag_option options[] = {
 
 
 void InitCLIOpts(CLI_OPTS* opts) {
-    opts->filter = NULL;
+    opts->file = NULL;
     opts->mode = NULL;
     opts->duration = 0;
     opts->jitter = false;
@@ -57,21 +57,21 @@ char* boolToString(bool conv) {
 }
 
 void PrintCLIOpts(CLI_OPTS* opts) {
-    printf("Filter: '%s'.\n", opts->filter);
-    printf("Duration: '%d s'.\n", opts->duration);
-    printf("Mode: '%s'.\n", opts->mode);
+    printf("File: '%s'\n", opts->file);
+    printf("Duration: '%d s'\n", opts->duration);
+    printf("Mode: '%s'\n", opts->mode);
 
     if (strcmp(opts->mode, "delay") == 0) {
-		printf("Delay time: '%d ms'.\n", opts->time);
-		printf("Jitter: '%s'.\n", boolToString(opts->jitter));
+		printf("Delay time: '%d ms'\n", opts->time);
+		printf("Jitter: '%s'\n", boolToString(opts->jitter));
     }
 
     if (strcmp(opts->mode, "corrupt") == 0) {
-        printf("Corrupt percentage: '%d'.\n", opts->percentage);
+        printf("Corrupt percentage: '%d'\n", opts->percentage);
     }
 
     if (strcmp(opts->mode, "drop") == 0) {
-        printf("Drop percentage: '%d'.\n", opts->percentage);
+        printf("Drop percentage: '%d'\n", opts->percentage);
     }
 }
 
@@ -82,7 +82,7 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
     while (cag_option_fetch(&context)) {
         switch (cag_option_get_identifier(&context)) {
         case 'f': {
-            opts->filter = cag_option_get_value(&context);
+            opts->file = cag_option_get_value(&context);
             break;
         }
         case 'm': {
@@ -153,8 +153,8 @@ int ParseCLIOpts(CLI_OPTS* opts, int argc, char **argv) {
         }
     }
 
-    if (opts->filter == NULL) {
-        printf("Filter must not be empty.");
+    if (opts->file == NULL) {
+        printf("File must not be empty.");
         return 1;
     }
 
