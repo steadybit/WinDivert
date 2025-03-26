@@ -68,6 +68,9 @@ jobs:
             output/x64/${{ env.config }}/*.exe
             output/x64/${{ env.config }}/*.dll
             output/x64/${{ env.config }}/*.sys
+            output/x64/${{ env.config }}/*.pdb
+            output/x64/${{ env.config }}/*.ini
+            output/x64/${{ env.config }}/*.cat
           retention-days: 7
 
   release:
