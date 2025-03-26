@@ -94,6 +94,8 @@
       <ImportLibrary>$(OutDir)WinDivert.lib</ImportLibrary>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <StackReserveSize Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </StackReserveSize>
     </Link>
     <PostBuildEvent>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

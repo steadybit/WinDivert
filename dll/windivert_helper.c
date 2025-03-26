@@ -237,7 +237,7 @@ typedef UINT64 ERROR, *PERROR;
 #define WINDIVERT_ERROR_ASSERTION_FAILED        10
 
 #define WINDIVERT_MIN_POOL_SIZE                 12288
-#define WINDIVERT_MAX_POOL_SIZE                 131072
+#define WINDIVERT_MAX_POOL_SIZE                 524288
 
 #define MAKE_ERROR(code, pos)                   \
     (((ERROR)(code) << 32) | (ERROR)(pos));
@@ -4140,7 +4140,7 @@ static void WinDivertFormatExpr(PWINDIVERT_STREAM stream, PEXPR expr,
 BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
     char *buffer, UINT buflen)
 {
-    PEXPR exprs[WINDIVERT_FILTER_MAXLEN], expr;
+    PEXPR expr;
     ERROR err;
     DWORD error;
     WINDIVERT_FILTER *object;
@@ -4148,6 +4148,7 @@ BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
     INT i;
     HANDLE pool;
     WINDIVERT_STREAM stream;
+    PEXPR* exprs = NULL;
 
     if (filter == NULL || buffer == NULL)
     {
@@ -4161,6 +4162,13 @@ BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
     {
         return FALSE;
     }
+
+    exprs = HeapAlloc(pool, 0, WINDIVERT_FILTER_MAXLEN * sizeof(PEXPR*));
+
+    if (exprs == NULL) {
+        goto WinDivertHelperFormatFilterError;
+    }
+
     object = HeapAlloc(pool, 0,
         WINDIVERT_FILTER_MAXLEN * sizeof(WINDIVERT_FILTER));
     if (object == NULL)
@@ -4243,6 +4251,7 @@ BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
 
 WinDivertHelperFormatFilterError:
     error = GetLastError();
+	HeapDestroy(exprs);
     HeapDestroy(pool);
     SetLastError(error);
     return FALSE;
