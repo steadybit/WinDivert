@@ -614,6 +614,7 @@ static BOOL WinDivertExpandMacro(KIND kind, WINDIVERT_LAYER layer, UINT32 *val)
 /*
  * Tokenize the given filter string.
  */
+#pragma optimize("", off)
 static ERROR WinDivertTokenizeFilter(const char *filter, WINDIVERT_LAYER layer,
     TOKEN *tokens, UINT tokensmax)
 {
@@ -2327,7 +2328,7 @@ static ERROR WinDivertCompileFilter(const char *filter, HANDLE pool,
     PEXPR expr;
     UINT i, max_depth, pos;
     INT16 label;
-    const SIZE_T tokens_size = 5 * WINDIVERT_FILTER_MAXLEN;
+    SIZE_T tokens_size = 10 * WINDIVERT_FILTER_MAXLEN;
     ERROR error;
 
     // Check for pre-compiled filter object:
