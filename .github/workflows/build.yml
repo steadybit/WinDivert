@@ -51,8 +51,24 @@ jobs:
           echo "artifact_name=windows-build-x64-${config}" >> $GITHUB_OUTPUT
         shell: bash
 
+      - name: Find and add Inf2Cat to PATH
+        run: |
+          $inf2catPath = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "Inf2Cat.exe" | Select-Object -ExpandProperty FullName -First 1
+          if ($inf2catPath) {
+            echo "Found Inf2Cat at: $inf2catPath"
+            echo "INF2CAT_PATH=$inf2catPath" >> $env:GITHUB_ENV
+            echo "PATH=$env:PATH;$(Split-Path $inf2catPath)" >> $env:GITHUB_ENV
+          } else {
+            echo "Inf2Cat.exe not found!" 
+            exit 1
+          }
+        shell: powershell
+
       - name: Build WinDivert
         run: scripts/build-windivert.ps1 ${{ env.config }}
+
+      - name: Build Catalog 
+        run: scripts/build-catalog.ps1 ${{ env.config }}
 
       - name: Build WDNA
         run: scripts/build-wdna.ps1 ${{ env.config }}
@@ -68,6 +84,9 @@ jobs:
             output/x64/${{ env.config }}/*.exe
             output/x64/${{ env.config }}/*.dll
             output/x64/${{ env.config }}/*.sys
+            output/x64/${{ env.config }}/WinDivert64.pdb
+            output/x64/${{ env.config }}/*.inf
+            output/x64/${{ env.config }}/*.cat
           retention-days: 7
 
   release:
