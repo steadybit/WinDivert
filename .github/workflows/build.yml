@@ -54,6 +54,9 @@ jobs:
       - name: Build WinDivert
         run: scripts/build-windivert.ps1 ${{ env.config }}
 
+      - name: Build Catalog 
+        run: scripts/build-catalog.ps1 ${{ env.config }}
+
       - name: Build WDNA
         run: scripts/build-wdna.ps1 ${{ env.config }}
 
@@ -68,7 +71,7 @@ jobs:
             output/x64/${{ env.config }}/*.exe
             output/x64/${{ env.config }}/*.dll
             output/x64/${{ env.config }}/*.sys
-            output/x64/${{ env.config }}/*.pdb
+            output/x64/${{ env.config }}/WinDivert64.pdb
             output/x64/${{ env.config }}/*.ini
             output/x64/${{ env.config }}/*.cat
           retention-days: 7

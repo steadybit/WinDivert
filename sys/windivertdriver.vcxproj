@@ -70,11 +70,6 @@
   <ItemGroup>
     <ClInclude Include="windivert_log.h" />
   </ItemGroup>
-  <ItemGroup>
-    <Inf Include="windivert64.inf">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-    </Inf>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
@@ -100,7 +95,7 @@
     <Inf2CatNoCatalog>false</Inf2CatNoCatalog>
     <TimeStampServer />
     <TargetName>WinDivert64</TargetName>
-    <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\output\$(Platform)\$(ConfigurationName)</OutDir>
@@ -108,7 +103,7 @@
     <TimeStampServer />
     <TargetName>WinDivert64</TargetName>
     <SignMode>TestSign</SignMode>
-    <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -126,10 +121,10 @@
       <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SHA256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rmdir /S /Q $(OutDir)$(MSBuildProjectName)
-Inf2Cat /driver:$(OutDir) /os:10_NI_X64</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rmdir /S /Q $(OutDir)$(MSBuildProjectName)
-Inf2Cat /driver:$(OutDir) /os:10_NI_X64</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
