@@ -255,7 +255,7 @@ typedef UINT64 ERROR, *PERROR;
 static UINT32 WinDivertKindToField(KIND kind);
 static PEXPR WinDivertParseFilter(HANDLE pool, TOKEN *toks, UINT *i,
     INT depth, BOOL and, PERROR error);
-static BOOL WinDivertCondExecFilter(PWINDIVERT_FILTER filter, UINT length,
+static BOOL WinDivertCondExecFilter(HANDLE pool, PWINDIVERT_FILTER filter, UINT length,
     UINT8 field, UINT32 arg);
 static int WinDivertCompare128(BOOL neg_a, const UINT32 *a, BOOL neg_b,
     const UINT32 *b, BOOL big);
@@ -2121,14 +2121,14 @@ static void WinDivertEmitFilter(PEXPR *stack, UINT len, UINT16 label,
 /*
  * Analyze a filter object.
  */
-static UINT64 WinDivertAnalyzeFilter(WINDIVERT_LAYER layer,
+static UINT64 WinDivertAnalyzeFilter(HANDLE pool, WINDIVERT_LAYER layer,
     PWINDIVERT_FILTER filter, UINT length)
 {
     BOOL result;
     UINT64 flags = 0;
 
     // False filter?
-    result = WinDivertCondExecFilter(filter, length,
+    result = WinDivertCondExecFilter(pool, filter, length,
         WINDIVERT_FILTER_FIELD_ZERO, 0);
     if (!result)
     {
@@ -2139,21 +2139,21 @@ static UINT64 WinDivertAnalyzeFilter(WINDIVERT_LAYER layer,
         layer == WINDIVERT_LAYER_NETWORK_FORWARD)
     {
         // Inbound?
-        result = WinDivertCondExecFilter(filter, length,
+        result = WinDivertCondExecFilter(pool, filter, length,
             WINDIVERT_FILTER_FIELD_INBOUND, 1);
         if (result)
         {
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_OUTBOUND, 0);
         }
         flags |= (result? WINDIVERT_FILTER_FLAG_INBOUND: 0);
 
         // Outbound?
-        result = WinDivertCondExecFilter(filter, length,
+        result = WinDivertCondExecFilter(pool, filter, length,
             WINDIVERT_FILTER_FIELD_OUTBOUND, 1);
         if (result)
         {
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_INBOUND, 0);
         }
         flags |= (result? WINDIVERT_FILTER_FLAG_OUTBOUND: 0);
@@ -2162,21 +2162,21 @@ static UINT64 WinDivertAnalyzeFilter(WINDIVERT_LAYER layer,
     if (layer != WINDIVERT_LAYER_REFLECT)
     {
         // IPv4? 
-        result = WinDivertCondExecFilter(filter, length,
+        result = WinDivertCondExecFilter(pool, filter, length,
             WINDIVERT_FILTER_FIELD_IP, 1);
         if (result)
         {   
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_IPV6, 0);
         }
         flags |= (result? WINDIVERT_FILTER_FLAG_IP: 0);
 
         // Ipv6? 
-        result = WinDivertCondExecFilter(filter, length,
+        result = WinDivertCondExecFilter(pool, filter, length,
             WINDIVERT_FILTER_FIELD_IPV6, 1);
         if (result)
         {   
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_IP, 0);
         }
         flags |= (result? WINDIVERT_FILTER_FLAG_IPV6: 0);
@@ -2186,25 +2186,25 @@ static UINT64 WinDivertAnalyzeFilter(WINDIVERT_LAYER layer,
     switch (layer)
     {
         case WINDIVERT_LAYER_FLOW:
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_FLOW_DELETED);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_FLOW_DELETED: 0);
             break;
 
         case WINDIVERT_LAYER_SOCKET:
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_SOCKET_BIND);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_SOCKET_BIND: 0);
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_SOCKET_CONNECT);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_SOCKET_CONNECT: 0);
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_SOCKET_CLOSE);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_SOCKET_CLOSE: 0);
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_SOCKET_LISTEN);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_SOCKET_LISTEN: 0);
-            result = WinDivertCondExecFilter(filter, length,
+            result = WinDivertCondExecFilter(pool, filter, length,
                 WINDIVERT_FILTER_FIELD_EVENT, WINDIVERT_EVENT_SOCKET_ACCEPT);
             flags |= (result? WINDIVERT_FILTER_FLAG_EVENT_SOCKET_ACCEPT: 0);
             break;
@@ -2220,18 +2220,19 @@ static UINT64 WinDivertAnalyzeFilter(WINDIVERT_LAYER layer,
  * Execute a filter object with respect to an assumption/condition.
  * FALSE = definite reject; TRUE = maybe accept.
  */
-static BOOL WinDivertCondExecFilter(PWINDIVERT_FILTER filter, UINT length,
+static BOOL WinDivertCondExecFilter(HANDLE pool, PWINDIVERT_FILTER filter, UINT length,
     UINT8 field, UINT32 arg)
 {
     INT16 ip;
     UINT16 succ, fail;
-    BOOLEAN result[WINDIVERT_FILTER_MAXLEN];
     BOOLEAN result_succ, result_fail, result_test;
 
     if (length == 0)
     {
         return TRUE;
     }
+
+    BOOLEAN* result = (BOOLEAN*)HeapAlloc(pool, 0, sizeof(BOOLEAN) * WINDIVERT_FILTER_MAXLEN);
 
     for (ip = (INT16)(length-1); ip >= 0; ip--)
     {
@@ -2313,12 +2314,15 @@ static BOOL WinDivertCondExecFilter(PWINDIVERT_FILTER filter, UINT length,
         }
     }
 
-    return result[0];
+    BOOLEAN res = result[0];
+    HeapFree(pool, 0, result);
+    return res;
 }
 
 /*
  * Compile a filter string into an executable filter object.
  */
+
 static ERROR WinDivertCompileFilter(const char *filter, HANDLE pool,
     WINDIVERT_LAYER layer, PWINDIVERT_FILTER object, UINT *obj_len)
 {
@@ -4140,7 +4144,7 @@ static void WinDivertFormatExpr(PWINDIVERT_STREAM stream, PEXPR expr,
 BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
     char *buffer, UINT buflen)
 {
-    PEXPR exprs[WINDIVERT_FILTER_MAXLEN], expr;
+    PEXPR expr;
     ERROR err;
     DWORD error;
     WINDIVERT_FILTER *object;
@@ -4156,13 +4160,21 @@ BOOL WinDivertHelperFormatFilter(const char *filter, WINDIVERT_LAYER layer,
     }
 
     pool = HeapCreate(HEAP_NO_SERIALIZE, WINDIVERT_MIN_POOL_SIZE,
-        WINDIVERT_MAX_POOL_SIZE);
+        0);
     if (pool == NULL)
     {
         return FALSE;
     }
     object = HeapAlloc(pool, 0,
         WINDIVERT_FILTER_MAXLEN * sizeof(WINDIVERT_FILTER));
+    
+    PEXPR* exprs = (PEXPR*)HeapAlloc(pool, 0 ,WINDIVERT_FILTER_MAXLEN * sizeof(PEXPR*));
+
+    if (exprs == NULL) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    
     if (object == NULL)
     {
         goto WinDivertHelperFormatFilterError;
