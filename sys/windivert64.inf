@@ -38,6 +38,6 @@ ServiceBinary = %12%\WinDivert64.sys
 [Strings]
 steadybit = "Steadybit GmbH"
 DiskName = "WinDivert Installation Disk"
-Description = "WinDivert Driver"
+Description = "WinDivert"
 ServiceName = "WinDivert"
 ServiceDesc = "WinDivert Driver"
