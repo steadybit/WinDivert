@@ -489,6 +489,7 @@ HANDLE WinDivertOpen(const char *filter, WINDIVERT_LAYER layer, INT16 priority,
             SetLastError(ERROR_INVALID_PARAMETER);
             return INVALID_HANDLE_VALUE;
     }
+
     if (!WINDIVERT_FLAGS_VALID(flags))
     {
         SetLastError(ERROR_INVALID_PARAMETER);
@@ -504,13 +505,16 @@ HANDLE WinDivertOpen(const char *filter, WINDIVERT_LAYER layer, INT16 priority,
 
     // Compile & analyze the filter:
     pool = HeapCreate(HEAP_NO_SERIALIZE, WINDIVERT_MIN_POOL_SIZE,
-        WINDIVERT_MAX_POOL_SIZE);
+        0);
+
     if (pool == NULL)
     {
         return FALSE;
     }
+
     object = HeapAlloc(pool, 0,
         WINDIVERT_FILTER_MAXLEN * sizeof(WINDIVERT_FILTER));
+
     if (object == NULL)
     {
         err = GetLastError();
@@ -518,6 +522,7 @@ HANDLE WinDivertOpen(const char *filter, WINDIVERT_LAYER layer, INT16 priority,
         SetLastError(err);
         return FALSE;
     }
+
     comp_err = WinDivertCompileFilter(filter, pool, layer, object, &obj_len);
     if (IS_ERROR(comp_err))
     {
@@ -525,7 +530,7 @@ HANDLE WinDivertOpen(const char *filter, WINDIVERT_LAYER layer, INT16 priority,
         SetLastError(ERROR_INVALID_PARAMETER);
         return INVALID_HANDLE_VALUE;
     }
-    filter_flags = WinDivertAnalyzeFilter(layer, object, obj_len);
+    filter_flags = WinDivertAnalyzeFilter(pool, layer, object, obj_len);
 
     // Attempt to open the WinDivert device:
     handle = CreateFile(L"\\\\.\\" WINDIVERT_DEVICE_NAME,
