@@ -1431,8 +1431,6 @@ static NTSTATUS windivert_install_provider()
     provider.displayData.name        = WINDIVERT_PROVIDER_NAME;
     provider.displayData.description = WINDIVERT_PROVIDER_DESC;
 
-    provider.flags = FWPM_PROVIDER_FLAG_PERSISTENT;
-
     // We don't care about the install result as this provider
     // is only for passing HLK test.
     FwpmProviderAdd0(engine_handle, &provider, NULL);
