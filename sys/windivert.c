@@ -504,8 +504,8 @@ static void windivert_log_event(PEPROCESS process, PDRIVER_OBJECT driver,
  */
 DEFINE_GUID(WINDIVERT_PROVIDER_GUID,
  0x544a6fd8, 0x73d6, 0x481b, 0x85, 0x74, 0x2b, 0xc9, 0x68, 0x16, 0xbd, 0xbd);
-#define WINDIVERT_PROVIDER_NAME WINDIVERT_DEVICE_NAME
-#define WINDIVERT_PROVIDER_DESC WINDIVERT_DEVICE_NAME L" provider"
+#define WINDIVERT_PROVIDER_NAME L"Steadybit GmbH" 
+#define WINDIVERT_PROVIDER_DESC L"WinDivert"
 
 /*
  * WinDivert sublayer GUIDs

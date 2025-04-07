@@ -65,40 +65,58 @@ int __cdecl main(int argc, char **argv)
     const char *filter = "true";
     int threads = 1, batch = 1, priority = 0;
     int i;
+    WINDIVERT_LAYER layer = WINDIVERT_LAYER_NETWORK;
     HANDLE handle, thread;
     CONFIG config;
 
-    if (argc > 5)
+    if (argc > 6)
     {
-        fprintf(stderr, "usage: %s [filter] [num-threads] [batch-size] "
+        fprintf(stderr, "usage: %s [layer] [filter] [num-threads] [batch-size] "
             "[priority]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    if (argc >= 2)
-    {
-        filter = argv[1];
+
+    if (argc >= 2) {
+        int layer_input = atoi(argv[1]);
+
+        if (layer_input != 0 && layer_input != 1) {
+            fprintf(stderr, "Only valid layers are '0' and '1'.");
+			exit(EXIT_FAILURE);
+        }
+
+        if (layer_input == 1) {
+            layer = WINDIVERT_LAYER_NETWORK_FORWARD;
+        }
+
+        printf("Layer: %d\n", layer_input);
     }
+
     if (argc >= 3)
     {
-        threads = atoi(argv[2]);
+        filter = argv[2];
+        printf("Filter: %s\n", filter);
+    }
+    if (argc >= 4)
+    {
+        threads = atoi(argv[3]);
         if (threads < 1 || threads > 64)
         {
             fprintf(stderr, "error: invalid number of threads\n");
             exit(EXIT_FAILURE);
         }
     }
-    if (argc >= 4)
+    if (argc >= 5)
     {
-        batch = atoi(argv[3]);
+        batch = atoi(argv[4]);
         if (batch <= 0 || batch > WINDIVERT_BATCH_MAX)
         {
             fprintf(stderr, "error: invalid batch size\n");
             exit(EXIT_FAILURE);
         }
     }
-    if (argc >= 5)
+    if (argc >= 6)
     {
-        priority = atoi(argv[4]);
+        priority = atoi(argv[5]);
         if (priority < WINDIVERT_PRIORITY_LOWEST ||
             priority > WINDIVERT_PRIORITY_HIGHEST)
         {
@@ -108,7 +126,7 @@ int __cdecl main(int argc, char **argv)
     }
 
     // Divert traffic matching the filter:
-    handle = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, (INT16)priority,
+    handle = WinDivertOpen(filter, layer, (INT16)priority,
         0);
     if (handle == INVALID_HANDLE_VALUE)
     {
