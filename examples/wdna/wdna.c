@@ -169,10 +169,10 @@ int __cdecl main(int argc, char **argv)
 		return 1;
 	}
 
-
 	ConsumePackets(&opts);
 	WaitForSingleObject(processing_thread, INFINITE);
 	CloseHandle(processing_thread);
+	WinDivertClose(handle);
 	return 0;
 }
 
