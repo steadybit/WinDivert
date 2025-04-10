@@ -15,7 +15,7 @@ if ($config -match "Debug") {
     msbuild "sys\windivertdriver.vcxproj" /v:n /p:Configuration=$config /p:Platform=x64 /p:TestCertificate=$($cert.Thumbprint) /p:OutDir="..\output\x64\$config\"
 } else {
     Write-Host "Building $config driver"
-    msbuild "sys\windivertdriver.vcxproj" /v:n /p:Configuration=$config /p:Platform=x64 /p:OutDir="..\output\x64\$config\"
+    msbuild "sys\windivertdriver.vcxproj" /v:n /p:Configuration=$config /p:Platform=x64 /p:OutDir="..\output\x64\$config\" /p:SignMode=Off
 }
 
 Write-Host "Building $config WinDivert DLL"
