@@ -22,6 +22,7 @@ jobs:
     outputs:
       is_prerelease: ${{ steps.config.outputs.is_prerelease }}
       artifact_name: ${{ steps.config.outputs.artifact_name }}
+      signed: ${{ steps.config.outputs.signed }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -40,9 +41,17 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
             config="Release"
             # Check if tag has a suffix (like -dev, -alpha, etc.)
-            if [[ "${{ github.ref_name }}" =~ .*-.* ]]; then
+            if [[ "${{ github.ref_name }}" =~ .*-dev ]]; then
               prerelease="true"
             fi
+          fi
+
+          if [[ "${{ github.ref_name }}" =~ -s$ ]]; then
+            echo "sign=`"Sign`"" >> $GITHUB_ENV
+            echo "signed="`"Signed`"" >> $GITHUB_OUTPUT
+          else
+            echo "sign="`"NoSign`"" >> $GITHUB_ENV
+            echo "signed="`"Not Signed`"" >> $GITHUB_OUTPUT
           fi
 
           echo "config=${config}" >> $GITHUB_ENV
