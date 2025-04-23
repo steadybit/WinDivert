@@ -47,11 +47,11 @@ jobs:
           fi
 
           if [[ "${{ github.ref_name }}" =~ -s$ ]]; then
-            echo "sign=`"Sign`"" >> $GITHUB_ENV
-            echo "signed="`"Signed`"" >> $GITHUB_OUTPUT
+            echo "sign=Sign" >> $GITHUB_ENV
+            echo "signed=Signed" >> $GITHUB_OUTPUT
           else
-            echo "sign="`"NoSign`"" >> $GITHUB_ENV
-            echo "signed="`"Not Signed`"" >> $GITHUB_OUTPUT
+            echo "sign=NoSign" >> $GITHUB_ENV
+            echo "signed=Not Signed" >> $GITHUB_OUTPUT
           fi
 
           echo "config=${config}" >> $GITHUB_ENV
