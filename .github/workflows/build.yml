@@ -41,7 +41,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
             config="Release"
             # Check if tag has a suffix (like -dev, -alpha, etc.)
-            if [[ "${{ github.ref_name }}" =~ .*-dev ]]; then
+            if [[ "${{ github.ref_name }}" == *-dev* ]]; then
               prerelease="true"
             fi
           fi
